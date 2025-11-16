@@ -29,7 +29,7 @@ if (-not (Test-Path $SSH_KEY)) {
 # Test SSH connection
 Write-Host "Testing SSH connection..." -ForegroundColor Yellow
 try {
-    $result = ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@$DROPLET_IP "echo 'SSH OK'" 2>&1
+    ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@$DROPLET_IP "echo 'SSH OK'" 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "ERROR: Cannot connect to droplet via SSH" -ForegroundColor Red
         exit 1
