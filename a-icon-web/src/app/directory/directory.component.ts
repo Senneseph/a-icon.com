@@ -2,7 +2,6 @@ import { Component, OnInit, inject, PLATFORM_ID, signal, computed } from '@angul
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
-import { environment } from '../../environments/environment';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of } from 'rxjs';
 
@@ -35,7 +34,7 @@ export class DirectoryComponent implements OnInit {
 
   // Computed URL based on sort parameters
   private apiUrl = computed(() => {
-    const url = `${environment.apiUrl}/api/directory?sortBy=${this.sortField()}&order=${this.sortOrder()}`;
+    const url = `/api/directory?sortBy=${this.sortField()}&order=${this.sortOrder()}`;
     console.log('[DirectoryComponent] Computed URL:', url);
     return url;
   });

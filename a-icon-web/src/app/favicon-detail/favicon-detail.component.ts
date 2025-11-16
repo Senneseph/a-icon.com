@@ -1,8 +1,7 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { environment } from '../../environments/environment';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, switchMap } from 'rxjs';
 
@@ -43,26 +42,25 @@ export class FaviconDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
-  // Get slug from route params
-  private slug = toSignal(this.route.params.pipe(map((params) => params['slug'])));
-
   // Fetch favicon data based on slug
   private faviconData = toSignal(
-    computed(() => {
-      const currentSlug = this.slug();
-      if (!currentSlug) return of({ data: null, error: 'No slug provided' });
+    this.route.params.pipe(
+      map((params) => params['slug']),
+      switchMap((currentSlug) => {
+        if (!currentSlug) return of({ data: null, error: 'No slug provided' });
 
-      const url = `${environment.apiUrl}/favicons/${currentSlug}`;
-      console.log('[FaviconDetailComponent] Fetching:', url);
+        const url = `/api/favicons/${currentSlug}`;
+        console.log('[FaviconDetailComponent] Fetching:', url);
 
-      return this.http.get<FaviconDetail>(url).pipe(
-        map((data) => ({ data, error: null })),
-        catchError((err) => {
-          console.error('[FaviconDetailComponent] Error:', err);
-          return of({ data: null, error: err.error?.message || 'Failed to load favicon' });
-        })
-      );
-    })(),
+        return this.http.get<FaviconDetail>(url).pipe(
+          map((data) => ({ data, error: null })),
+          catchError((err) => {
+            console.error('[FaviconDetailComponent] Error:', err);
+            return of({ data: null, error: err.error?.message || 'Failed to load favicon' });
+          })
+        );
+      })
+    ),
     { initialValue: { data: null, error: null } }
   );
 
