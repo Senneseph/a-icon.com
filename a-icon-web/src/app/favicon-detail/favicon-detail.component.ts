@@ -143,5 +143,42 @@ export class FaviconDetailComponent implements OnInit {
   getAssetsByType(type: string): FaviconAsset[] {
     return this.favicon()?.assets.filter((a) => a.type === type) || [];
   }
+
+  previewInBrowser() {
+    const favicon = this.favicon();
+    if (!favicon) return;
+
+    // Find the best favicon asset to use (prefer 32x32 PNG or ICO)
+    const preferredAsset = favicon.assets.find(a =>
+      (a.format === 'png' && a.size === 32) ||
+      (a.format === 'ico' && a.size === 32)
+    ) || favicon.assets.find(a => a.format === 'png') || favicon.assets[0];
+
+    if (preferredAsset) {
+      this.changeFavicon(preferredAsset.url);
+    } else {
+      // Fallback to source image if no assets available
+      this.changeFavicon(favicon.sourceUrl);
+    }
+  }
+
+  private changeFavicon(iconUrl: string) {
+    // Remove existing favicon links
+    const existingLinks = document.querySelectorAll("link[rel*='icon']");
+    existingLinks.forEach(link => link.remove());
+
+    // Add new favicon link
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/x-icon';
+    link.href = iconUrl;
+    document.head.appendChild(link);
+
+    // Also add apple-touch-icon for better support
+    const appleLink = document.createElement('link');
+    appleLink.rel = 'apple-touch-icon';
+    appleLink.href = iconUrl;
+    document.head.appendChild(appleLink);
+  }
 }
 

@@ -95,5 +95,29 @@ export class DirectoryComponent implements OnInit {
       minute: '2-digit',
     });
   }
+
+  previewInBrowser(sourceUrl: string, event: Event): void {
+    event.stopPropagation();
+    this.changeFavicon(sourceUrl);
+  }
+
+  private changeFavicon(iconUrl: string): void {
+    // Remove existing favicon links
+    const existingLinks = document.querySelectorAll("link[rel*='icon']");
+    existingLinks.forEach(link => link.remove());
+
+    // Add new favicon link
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/x-icon';
+    link.href = iconUrl;
+    document.head.appendChild(link);
+
+    // Also add apple-touch-icon for better support
+    const appleLink = document.createElement('link');
+    appleLink.rel = 'apple-touch-icon';
+    appleLink.href = iconUrl;
+    document.head.appendChild(appleLink);
+  }
 }
 
