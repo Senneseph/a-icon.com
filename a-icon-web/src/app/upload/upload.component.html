@@ -1,0 +1,106 @@
+<div class="upload-container">
+  <div class="header">
+    <h1>🎨 A-Icon.com</h1>
+    <p class="subtitle">Convert any image into a complete favicon set</p>
+  </div>
+
+  @if (!result) {
+    <div class="upload-section">
+      <div class="upload-box" (click)="fileInput.click()">
+        @if (previewUrl) {
+          <img [src]="previewUrl" alt="Preview" class="preview-image" />
+        } @else {
+          <div class="upload-placeholder">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p>Click to select an image</p>
+            <p class="hint">PNG, JPG, WebP, or SVG (max 10MB)</p>
+          </div>
+        }
+        <input
+          #fileInput
+          type="file"
+          accept="image/*"
+          (change)="onFileSelected($event)"
+          style="display: none"
+        />
+      </div>
+
+      @if (error) {
+        <div class="error-message">{{ error }}</div>
+      }
+
+      @if (selectedFile) {
+        <div class="file-info">
+          <p><strong>Selected:</strong> {{ selectedFile.name }}</p>
+          <p><strong>Size:</strong> {{ (selectedFile.size / 1024).toFixed(2) }} KB</p>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" (click)="uploadImage()" [disabled]="uploading">
+            @if (uploading) {
+              <span>Generating...</span>
+            } @else {
+              <span>Generate Favicons</span>
+            }
+          </button>
+          <button class="btn btn-secondary" (click)="reset()" [disabled]="uploading">
+            Cancel
+          </button>
+        </div>
+      }
+
+      <div class="nav-link">
+        <a (click)="viewDirectory()">View all favicons →</a>
+      </div>
+    </div>
+  } @else {
+    <div class="result-section">
+      <div class="success-message">
+        <h2>✅ Favicons Generated Successfully!</h2>
+        <p>Your favicon set is ready. Share the URL below:</p>
+      </div>
+
+      <div class="url-box">
+        <input
+          type="text"
+          [value]="result.sourceUrl"
+          readonly
+          class="url-input"
+        />
+        <button class="btn btn-copy" (click)="copyToClipboard(result.sourceUrl)">
+          Copy URL
+        </button>
+      </div>
+
+      <div class="assets-grid">
+        <h3>Generated Assets ({{ result.assets.length }} files)</h3>
+        <div class="assets-list">
+          @for (asset of result.assets; track asset.id) {
+            <div class="asset-item">
+              <img [src]="asset.url" [alt]="asset.size" class="asset-preview" />
+              <div class="asset-info">
+                <span class="asset-size">{{ asset.size }}</span>
+                <span class="asset-type">{{ asset.type }}</span>
+              </div>
+              <a [href]="asset.url" download class="asset-download">↓</a>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" (click)="reset()">
+          Upload Another Image
+        </button>
+        <button class="btn btn-secondary" (click)="viewDirectory()">
+          View Directory
+        </button>
+      </div>
+    </div>
+  }
+</div>
+

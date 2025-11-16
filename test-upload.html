@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A-Icon Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .upload-form {
+            border: 2px dashed #ccc;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .assets {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .asset-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .asset-item img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>A-Icon Favicon Generator</h1>
+    
+    <div class="upload-form">
+        <h2>Upload an Image</h2>
+        <input type="file" id="fileInput" accept="image/*">
+        <br>
+        <label>Title (optional): <input type="text" id="title"></label>
+        <br>
+        <label>Target Domain (optional): <input type="text" id="targetDomain" placeholder="example.com"></label>
+        <br><br>
+        <button onclick="uploadImage()">Generate Favicon</button>
+    </div>
+
+    <div id="result" class="result" style="display: none;">
+        <h3>Result</h3>
+        <div id="resultContent"></div>
+    </div>
+
+    <script>
+        async function uploadImage() {
+            const fileInput = document.getElementById('fileInput');
+            const title = document.getElementById('title').value;
+            const targetDomain = document.getElementById('targetDomain').value;
+            
+            if (!fileInput.files[0]) {
+                alert('Please select an image file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            if (title) formData.append('title', title);
+            if (targetDomain) formData.append('targetDomain', targetDomain);
+
+            try {
+                const response = await fetch('http://localhost:3000/api/favicons/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('resultContent').innerHTML = `
+                    <p><strong>Slug:</strong> ${data.slug}</p>
+                    <p><strong>URL:</strong> <a href="http://localhost:3000${data.url}" target="_blank">${data.url}</a></p>
+                    <p><strong>Status:</strong> ${data.message}</p>
+                    <button onclick="checkStatus('${data.slug}')">Check Status & View Assets</button>
+                `;
+            } catch (error) {
+                alert('Error uploading image: ' + error.message);
+            }
+        }
+
+        async function checkStatus(slug) {
+            try {
+                const response = await fetch(`http://localhost:3000/api/favicons/${slug}`);
+                const data = await response.json();
+                
+                let assetsHtml = '<div class="assets">';
+                data.assets.forEach(asset => {
+                    assetsHtml += `
+                        <div class="asset-item">
+                            <img src="http://localhost:3000${asset.url}" alt="${asset.size}">
+                            <p>${asset.type} ${asset.size || ''}</p>
+                        </div>
+                    `;
+                });
+                assetsHtml += '</div>';
+
+                document.getElementById('resultContent').innerHTML = `
+                    <p><strong>Slug:</strong> ${data.slug}</p>
+                    <p><strong>Title:</strong> ${data.title || 'N/A'}</p>
+                    <p><strong>Status:</strong> ${data.generationStatus}</p>
+                    <p><strong>Created:</strong> ${new Date(data.createdAt).toLocaleString()}</p>
+                    ${data.generationError ? `<p style="color: red;"><strong>Error:</strong> ${data.generationError}</p>` : ''}
+                    <h4>Generated Assets:</h4>
+                    ${assetsHtml}
+                `;
+            } catch (error) {
+                alert('Error checking status: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
+

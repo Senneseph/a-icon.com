@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./a-icon-api
+      dockerfile: Dockerfile
+    container_name: a-icon-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_PATH: /usr/src/app/data/a-icon.db
+      STORAGE_ROOT: /usr/src/app/data/storage
+    volumes:
+      - ./data:/usr/src/app/data
+    networks:
+      - a-icon-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  web:
+    build:
+      context: ./a-icon-web
+      dockerfile: Dockerfile
+      args:
+        - API_URL=
+    container_name: a-icon-web
+    restart: unless-stopped
+    ports:
+      - "4200:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+    networks:
+      - a-icon-network
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  a-icon-network:
+    driver: bridge
+
+volumes:
+  api-data:
+

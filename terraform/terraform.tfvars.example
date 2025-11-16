@@ -1,0 +1,9 @@
+# DigitalOcean API Token
+do_token = "your-digitalocean-api-token-here"
+
+# SSH Public Key (paste your public key here)
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... your-key-here"
+
+# Domain name
+domain = "a-icon.com"
+
