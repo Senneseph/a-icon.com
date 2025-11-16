@@ -1,0 +1,22 @@
+{
+  "name": "a-icon-e2e",
+  "version": "1.0.0",
+  "description": "End-to-end tests for a-icon.com",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:production": "BASE_URL=https://a-icon.com API_URL=https://a-icon.com/api playwright test",
+    "test:local": "BASE_URL=http://localhost:4200 API_URL=http://localhost:3000/api playwright test",
+    "report": "playwright show-report"
+  },
+  "keywords": ["e2e", "playwright", "testing"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^20.17.19"
+  }
+}
+
