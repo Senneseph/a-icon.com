@@ -91,6 +91,12 @@
             <strong>Source Type:</strong>
             <span>{{ favicon()!.sourceType }}</span>
           </div>
+          @if (favicon()!.metadata) {
+            <div class="metadata-item metadata-secret">
+              <strong>{{ favicon()!.hasSteganography ? '🔐 Secret Meta Data' : '📝 Meta Data' }}:</strong>
+              <span class="metadata-text">{{ favicon()!.metadata }}</span>
+            </div>
+          }
         </div>
       </div>
 

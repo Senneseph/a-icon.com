@@ -46,11 +46,32 @@
               id="domainName"
               type="text"
               [(ngModel)]="domainName"
+              (ngModelChange)="onDomainChange()"
               placeholder="a-icon.com"
               class="form-input"
+              [class.error]="domainError"
+              maxlength="256"
               required
             />
-            <p class="field-hint">This will be included in the filename of each generated asset</p>
+            @if (domainError) {
+              <p class="field-error">{{ domainError }}</p>
+            }
+            <p class="field-hint">Must be a valid domain (max 256 chars, e.g., example.com)</p>
+          </div>
+
+          <div class="form-field">
+            <label for="metadata">Secret Metadata (Optional)</label>
+            <textarea
+              id="metadata"
+              [(ngModel)]="metadata"
+              placeholder="Enter secret message to embed in the image..."
+              class="form-textarea"
+              maxlength="256"
+              rows="3"
+            ></textarea>
+            <p class="field-hint">
+              {{ metadata.length }}/256 characters - Will be embedded steganographically in the image
+            </p>
           </div>
         </div>
 

@@ -26,6 +26,7 @@ export class FaviconController {
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body('title') title?: string,
     @Body('targetDomain') targetDomain?: string,
+    @Body('metadata') metadata?: string,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -37,6 +38,7 @@ export class FaviconController {
       sourceType: 'UPLOAD',
       title,
       targetDomain,
+      metadata,
     });
 
     // Return the full favicon details including assets
@@ -52,6 +54,7 @@ export class FaviconController {
     @Body('dataUrl') dataUrl: string,
     @Body('title') title?: string,
     @Body('targetDomain') targetDomain?: string,
+    @Body('metadata') metadata?: string,
   ) {
     if (!dataUrl) {
       throw new BadRequestException('No canvas data provided');
@@ -67,6 +70,7 @@ export class FaviconController {
       sourceType: 'CANVAS',
       title,
       targetDomain,
+      metadata,
     });
 
     // Return the full favicon details including assets
@@ -102,6 +106,8 @@ export class FaviconController {
       generatedAt: favicon.generated_at,
       generationStatus: favicon.generation_status,
       generationError: favicon.generation_error,
+      metadata: favicon.metadata,
+      hasSteganography: favicon.has_steganography === 1,
       assets: assets.map((a) => ({
         id: a.id,
         type: a.type,
