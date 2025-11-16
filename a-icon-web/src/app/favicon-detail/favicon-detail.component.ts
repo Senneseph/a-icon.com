@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, computed } from '@angular/core';
+import { Component, OnInit, inject, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Meta, Title } from '@angular/platform-browser';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, switchMap } from 'rxjs';
 
@@ -41,6 +42,8 @@ export class FaviconDetailComponent implements OnInit {
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private meta = inject(Meta);
+  private titleService = inject(Title);
 
   // Fetch favicon data based on slug
   private faviconData = toSignal(
@@ -68,8 +71,46 @@ export class FaviconDetailComponent implements OnInit {
   error = computed(() => this.faviconData()?.error);
   loading = computed(() => !this.faviconData());
 
+  constructor() {
+    // Update meta tags when favicon data changes
+    effect(() => {
+      const favicon = this.favicon();
+      if (favicon) {
+        this.updateMetaTags(favicon);
+      }
+    });
+  }
+
   ngOnInit() {
     console.log('[FaviconDetailComponent] Initialized');
+  }
+
+  private updateMetaTags(favicon: FaviconDetail) {
+    const baseUrl = 'https://a-icon.com';
+    const pageUrl = `${baseUrl}/favicon/${favicon.slug}`;
+    const imageUrl = `${baseUrl}${favicon.sourceUrl}`;
+    const title = favicon.title || `Favicon ${favicon.slug}`;
+    const description = `View and download favicon ${favicon.slug}${favicon.title ? ` - ${favicon.title}` : ''}. Generated on ${new Date(favicon.createdAt).toLocaleDateString()}.`;
+
+    // Set page title
+    this.titleService.setTitle(`${title} | a-icon.com`);
+
+    // Open Graph meta tags (Facebook, LinkedIn, etc.)
+    this.meta.updateTag({ property: 'og:title', content: title });
+    this.meta.updateTag({ property: 'og:description', content: description });
+    this.meta.updateTag({ property: 'og:image', content: imageUrl });
+    this.meta.updateTag({ property: 'og:url', content: pageUrl });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:site_name', content: 'a-icon.com' });
+
+    // Twitter Card meta tags
+    this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
+    this.meta.updateTag({ name: 'twitter:title', content: title });
+    this.meta.updateTag({ name: 'twitter:description', content: description });
+    this.meta.updateTag({ name: 'twitter:image', content: imageUrl });
+
+    // Additional meta tags
+    this.meta.updateTag({ name: 'description', content: description });
   }
 
   goToDirectory() {
