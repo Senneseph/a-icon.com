@@ -51,8 +51,8 @@ export class FaviconService {
       generated_at: null,
       generation_status: 'PENDING',
       generation_error: null,
-      metadata: hasMetadata ? dto.metadata.trim() : null,
-      has_steganography: hasMetadata ? 1 : 0,
+      metadata: hasMetadata ? dto.metadata!.trim() : null,
+      has_steganography: 0, // Currently only using EXIF, not steganography
     };
 
     this.db.insertFavicon(favicon);
