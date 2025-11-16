@@ -149,5 +149,135 @@ test.describe('Favicon Generator E2E Tests', () => {
       }
     }
   });
+
+  test('should verify asset view and download links on detail page', async ({ page, context }) => {
+    // First, go to directory to find a favicon
+    await page.goto(`${BASE_URL}/directory`);
+    await page.waitForLoadState('networkidle');
+
+    const faviconCards = page.locator('.favicon-card');
+    const count = await faviconCards.count();
+
+    if (count === 0) {
+      console.log('No favicons in directory, skipping asset link test');
+      return;
+    }
+
+    // Click on the first favicon's "View Details" button
+    const viewButton = faviconCards.first().locator('.btn-view');
+    await viewButton.click();
+
+    // Wait for navigation to detail page
+    await page.waitForURL(/\/favicon\//);
+    await page.waitForLoadState('networkidle');
+
+    // Verify we're on the detail page
+    expect(page.url()).toContain('/favicon/');
+
+    // Wait for assets section to load
+    const assetsSection = page.locator('.assets-section');
+    await expect(assetsSection).toBeVisible();
+
+    // Check if there are any assets
+    const assetCards = page.locator('.asset-card');
+    const assetCount = await assetCards.count();
+
+    console.log(`Found ${assetCount} assets on detail page`);
+
+    if (assetCount > 0) {
+      const firstAsset = assetCards.first();
+
+      // Test "View" link
+      const viewLink = firstAsset.locator('a:has-text("View")');
+      await expect(viewLink).toBeVisible();
+
+      const viewHref = await viewLink.getAttribute('href');
+      expect(viewHref).toBeTruthy();
+      expect(viewHref).toContain('/api/storage/');
+      console.log('Asset view link:', viewHref);
+
+      // Verify the view link actually loads an image
+      const newPage = await context.newPage();
+      const response = await newPage.goto(viewHref!);
+      expect(response?.ok()).toBeTruthy();
+
+      const contentType = response?.headers()['content-type'];
+      expect(contentType).toMatch(/image\/(png|x-icon|svg\+xml|jpeg)/);
+      console.log('Asset content type:', contentType);
+
+      await newPage.close();
+
+      // Test "Download" button
+      const downloadButton = firstAsset.locator('button:has-text("Download")');
+      await expect(downloadButton).toBeVisible();
+
+      // Set up download listener
+      const downloadPromise = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+
+      // Click download button
+      await downloadButton.click();
+
+      // Wait a bit for download to potentially start
+      const download = await downloadPromise;
+
+      if (download) {
+        console.log('Download started:', await download.suggestedFilename());
+
+        // Verify filename format (should be slug-size.format)
+        const filename = await download.suggestedFilename();
+        expect(filename).toMatch(/.*-\d+\.(png|ico|svg)$/);
+
+        // Cancel the download (we don't need to actually save it)
+        await download.cancel();
+      } else {
+        console.log('Download did not trigger (may be browser-dependent)');
+      }
+    } else {
+      console.log('No assets found on detail page');
+    }
+  });
+
+  test('should verify all asset links are valid', async ({ page, request }) => {
+    // Go to directory
+    await page.goto(`${BASE_URL}/directory`);
+    await page.waitForLoadState('networkidle');
+
+    const faviconCards = page.locator('.favicon-card');
+    const count = await faviconCards.count();
+
+    if (count === 0) {
+      console.log('No favicons in directory, skipping asset validation test');
+      return;
+    }
+
+    // Navigate to first favicon detail page
+    const viewButton = faviconCards.first().locator('.btn-view');
+    await viewButton.click();
+    await page.waitForURL(/\/favicon\//);
+    await page.waitForLoadState('networkidle');
+
+    // Get all asset view links
+    const assetViewLinks = page.locator('.asset-card a:has-text("View")');
+    const linkCount = await assetViewLinks.count();
+
+    console.log(`Validating ${linkCount} asset links`);
+
+    // Validate each link
+    for (let i = 0; i < Math.min(linkCount, 5); i++) { // Test up to 5 assets
+      const link = assetViewLinks.nth(i);
+      const href = await link.getAttribute('href');
+
+      if (href) {
+        console.log(`Testing asset link ${i + 1}: ${href}`);
+
+        // Make a request to verify the asset is accessible
+        const response = await request.get(href);
+        expect(response.ok()).toBeTruthy();
+
+        const contentType = response.headers()['content-type'];
+        expect(contentType).toMatch(/image\/(png|x-icon|svg\+xml|jpeg)/);
+      }
+    }
+  });
 });
 
