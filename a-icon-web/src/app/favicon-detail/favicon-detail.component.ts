@@ -137,11 +137,18 @@ export class FaviconDetailComponent implements OnInit {
     });
   }
 
-  downloadAsset(url: string, filename: string) {
+  downloadAsset(url: string, filename: string): void {
+    // Only run in browser, not during SSR
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   }
 
   formatDate(dateString: string): string {
