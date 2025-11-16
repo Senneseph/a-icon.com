@@ -20,6 +20,33 @@
     </div>
   } @else if (favicon()) {
     <div class="favicon-detail">
+      <!-- Quick Actions -->
+      <div class="actions-section">
+        <h2>Quick Actions</h2>
+        <div class="action-buttons">
+          <button
+            class="btn btn-primary"
+            (click)="previewInBrowser()"
+            title="Preview this favicon in your current browser tab"
+          >
+            ▶️ Preview In Browser
+          </button>
+          <button
+            class="btn btn-primary"
+            (click)="copyToClipboard(favicon()!.publishedUrl, $event)"
+          >
+            📋 Copy Published URL
+          </button>
+          <a
+            [href]="favicon()!.sourceUrl"
+            target="_blank"
+            class="btn btn-secondary"
+          >
+            🖼️ View Original Image
+          </a>
+        </div>
+      </div>
+
       <!-- Preview Section -->
       <div class="preview-section">
         <h2>Preview</h2>
@@ -118,31 +145,7 @@
       </div>
 
       <!-- Download All Section -->
-      <div class="actions-section">
-        <h2>Quick Actions</h2>
-        <div class="action-buttons">
-          <button
-            class="btn btn-primary"
-            (click)="previewInBrowser()"
-            title="Preview this favicon in your current browser tab"
-          >
-            ▶️ Preview In Browser
-          </button>
-          <button
-            class="btn btn-primary"
-            (click)="copyToClipboard(favicon()!.publishedUrl, $event)"
-          >
-            📋 Copy Published URL
-          </button>
-          <a
-            [href]="favicon()!.sourceUrl"
-            target="_blank"
-            class="btn btn-secondary"
-          >
-            🖼️ View Original Image
-          </a>
-        </div>
-      </div>
+
     </div>
   }
 </div>
