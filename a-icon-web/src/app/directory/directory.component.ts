@@ -98,6 +98,12 @@ export class DirectoryComponent implements OnInit {
 
   previewInBrowser(sourceUrl: string, event: Event): void {
     event.stopPropagation();
+
+    // Only run in browser, not during SSR
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
     this.changeFavicon(sourceUrl);
   }
 
@@ -118,6 +124,8 @@ export class DirectoryComponent implements OnInit {
     appleLink.rel = 'apple-touch-icon';
     appleLink.href = iconUrl;
     document.head.appendChild(appleLink);
+
+    console.log('[DirectoryComponent] Changed favicon to:', iconUrl);
   }
 }
 
