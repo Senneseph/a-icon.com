@@ -73,11 +73,10 @@
           </div>
           <div class="favicon-actions">
             <a
-              [href]="favicon.sourceUrl"
-              target="_blank"
+              [routerLink]="['/favicon', favicon.slug]"
               class="btn btn-small btn-view"
             >
-              View
+              View Details
             </a>
             <button
               class="btn btn-small btn-copy"

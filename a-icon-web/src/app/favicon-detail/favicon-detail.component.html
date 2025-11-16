@@ -1,0 +1,142 @@
+<div class="detail-container">
+  <div class="header">
+    <button class="btn btn-secondary" (click)="goToDirectory()">
+      ← Back to Directory
+    </button>
+    <h1>🎨 Favicon Details</h1>
+  </div>
+
+  @if (loading()) {
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Loading favicon...</p>
+    </div>
+  } @else if (error()) {
+    <div class="error-message">
+      <p>{{ error() }}</p>
+      <button class="btn btn-secondary" (click)="goToDirectory()">
+        Back to Directory
+      </button>
+    </div>
+  } @else if (favicon()) {
+    <div class="favicon-detail">
+      <!-- Preview Section -->
+      <div class="preview-section">
+        <h2>Preview</h2>
+        <div class="preview-image">
+          <img [src]="favicon()!.sourceUrl" [alt]="favicon()!.slug" />
+        </div>
+        <div class="metadata">
+          <div class="metadata-item">
+            <strong>Slug:</strong>
+            <code>{{ favicon()!.slug }}</code>
+            <button
+              class="btn-icon"
+              (click)="copyToClipboard(favicon()!.slug, $event)"
+              title="Copy slug"
+            >
+              📋
+            </button>
+          </div>
+          @if (favicon()!.title) {
+            <div class="metadata-item">
+              <strong>Title:</strong>
+              <span>{{ favicon()!.title }}</span>
+            </div>
+          }
+          @if (favicon()!.targetDomain) {
+            <div class="metadata-item">
+              <strong>Target Domain:</strong>
+              <span>{{ favicon()!.targetDomain }}</span>
+            </div>
+          }
+          <div class="metadata-item">
+            <strong>Created:</strong>
+            <span>{{ formatDate(favicon()!.createdAt) }}</span>
+          </div>
+          <div class="metadata-item">
+            <strong>Status:</strong>
+            <span class="status" [class.status-success]="favicon()!.generationStatus === 'COMPLETED'">
+              {{ favicon()!.generationStatus }}
+            </span>
+          </div>
+          <div class="metadata-item">
+            <strong>Source Type:</strong>
+            <span>{{ favicon()!.sourceType }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assets Section -->
+      <div class="assets-section">
+        <h2>Generated Assets ({{ favicon()!.assets.length }})</h2>
+        
+        @if (favicon()!.assets.length === 0) {
+          <p class="no-assets">No assets generated yet.</p>
+        } @else {
+          <div class="assets-grid">
+            @for (asset of favicon()!.assets; track asset.id) {
+              <div class="asset-card">
+                <div class="asset-icon">
+                  @if (asset.format === 'png') {
+                    🖼️
+                  } @else if (asset.format === 'ico') {
+                    🎯
+                  } @else if (asset.format === 'svg') {
+                    📐
+                  } @else {
+                    📄
+                  }
+                </div>
+                <div class="asset-info">
+                  <div class="asset-type">{{ asset.type }}</div>
+                  <div class="asset-details">
+                    {{ asset.size }}x{{ asset.size }} • {{ asset.format.toUpperCase() }}
+                  </div>
+                </div>
+                <div class="asset-actions">
+                  <a
+                    [href]="asset.url"
+                    target="_blank"
+                    class="btn btn-small"
+                    title="View asset"
+                  >
+                    View
+                  </a>
+                  <button
+                    class="btn btn-small btn-secondary"
+                    (click)="downloadAsset(asset.url, favicon()!.slug + '-' + asset.size + '.' + asset.format)"
+                    title="Download asset"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Download All Section -->
+      <div class="actions-section">
+        <h2>Quick Actions</h2>
+        <div class="action-buttons">
+          <button
+            class="btn btn-primary"
+            (click)="copyToClipboard(favicon()!.publishedUrl, $event)"
+          >
+            📋 Copy Published URL
+          </button>
+          <a
+            [href]="favicon()!.sourceUrl"
+            target="_blank"
+            class="btn btn-secondary"
+          >
+            🖼️ View Original Image
+          </a>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
