@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, PLATFORM_ID, signal, computed } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of } from 'rxjs';
@@ -20,7 +20,7 @@ type SortOrder = 'asc' | 'desc';
 @Component({
   selector: 'app-directory',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './directory.component.html',
   styleUrls: ['./directory.component.scss'],
 })
