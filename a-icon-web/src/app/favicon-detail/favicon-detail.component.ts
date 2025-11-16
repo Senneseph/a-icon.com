@@ -28,6 +28,8 @@ interface FaviconDetail {
   generatedAt: string | null;
   generationStatus: string;
   generationError: string | null;
+  metadata: string | null;
+  hasSteganography: boolean;
   assets: FaviconAsset[];
 }
 

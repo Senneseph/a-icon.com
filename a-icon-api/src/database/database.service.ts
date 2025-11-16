@@ -17,6 +17,8 @@ export interface Favicon {
   generated_at: string | null;
   generation_status: 'PENDING' | 'SUCCESS' | 'FAILED';
   generation_error: string | null;
+  metadata: string | null; // Secret metadata embedded in images
+  has_steganography: number; // 0/1 - whether steganography was applied
 }
 
 export interface FaviconAsset {
@@ -56,7 +58,9 @@ export class DatabaseService implements OnModuleInit {
         updated_at TEXT NOT NULL,
         generated_at TEXT,
         generation_status TEXT NOT NULL CHECK(generation_status IN ('PENDING', 'SUCCESS', 'FAILED')),
-        generation_error TEXT
+        generation_error TEXT,
+        metadata TEXT,
+        has_steganography INTEGER NOT NULL DEFAULT 0
       );
 
       CREATE INDEX IF NOT EXISTS idx_favicons_created_at ON favicons(created_at);
@@ -90,8 +94,8 @@ export class DatabaseService implements OnModuleInit {
       INSERT INTO favicons (
         id, slug, title, target_domain, published_url, canonical_svg_key,
         source_type, source_original_mime, is_published, created_at, updated_at,
-        generated_at, generation_status, generation_error
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        generated_at, generation_status, generation_error, metadata, has_steganography
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       favicon.id,
@@ -108,6 +112,8 @@ export class DatabaseService implements OnModuleInit {
       favicon.generated_at,
       favicon.generation_status,
       favicon.generation_error,
+      favicon.metadata,
+      favicon.has_steganography,
     );
   }
 

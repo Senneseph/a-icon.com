@@ -10,6 +10,7 @@ export interface CreateFaviconDto {
   sourceType: 'UPLOAD' | 'CANVAS';
   title?: string;
   targetDomain?: string;
+  metadata?: string; // Secret metadata to embed
 }
 
 @Injectable()
@@ -34,6 +35,7 @@ export class FaviconService {
     await this.storage.putObject(sourceKey, dto.sourceBuffer, dto.sourceMimeType);
 
     // Create the favicon record
+    const hasMetadata = dto.metadata && dto.metadata.trim().length > 0;
     const favicon: Favicon = {
       id,
       slug,
@@ -49,12 +51,14 @@ export class FaviconService {
       generated_at: null,
       generation_status: 'PENDING',
       generation_error: null,
+      metadata: hasMetadata ? dto.metadata.trim() : null,
+      has_steganography: hasMetadata ? 1 : 0,
     };
 
     this.db.insertFavicon(favicon);
 
     // Generate all favicon assets asynchronously (in real production, use a queue)
-    this.generateAssets(id, slug, dto.sourceBuffer).catch((err) => {
+    this.generateAssets(id, slug, dto.sourceBuffer, dto.metadata).catch((err) => {
       console.error(`Failed to generate assets for favicon ${id}:`, err);
       this.db.updateFaviconStatus(id, 'FAILED', err.message, null);
     });
@@ -62,13 +66,13 @@ export class FaviconService {
     return { id, slug };
   }
 
-  private async generateAssets(faviconId: string, slug: string, sourceBuffer: Buffer): Promise<void> {
+  private async generateAssets(faviconId: string, slug: string, sourceBuffer: Buffer, metadata?: string): Promise<void> {
     try {
       // Get the favicon to retrieve the target domain
       const favicon = this.db.getFaviconById(faviconId);
       const domain = favicon?.target_domain || 'a-icon.com';
 
-      const generatedAssets = await this.generator.generateFromImage(sourceBuffer);
+      const generatedAssets = await this.generator.generateFromImage(sourceBuffer, { metadata });
 
       for (const asset of generatedAssets) {
         const assetId = nanoid();

@@ -35,6 +35,8 @@ export class UploadComponent {
   error: string | null = null;
   result: FaviconResponse | null = null;
   domainName = 'a-icon.com'; // Default domain name
+  domainError: string | null = null;
+  metadata = ''; // Optional secret metadata
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -65,6 +67,43 @@ export class UploadComponent {
     }
   }
 
+  validateDomain(domain: string): string | null {
+    // Max 256 characters
+    if (domain.length > 256) {
+      return 'Domain name must be 256 characters or less';
+    }
+
+    // Must contain at least one dot
+    if (!domain.includes('.')) {
+      return 'Domain name must contain at least one dot (.)';
+    }
+
+    // Must have content before and after the dot (TLD syntax)
+    const parts = domain.split('.');
+    if (parts.length < 2) {
+      return 'Domain name must have content before and after the dot';
+    }
+
+    // Check that no part is empty
+    for (const part of parts) {
+      if (part.trim() === '') {
+        return 'Domain name cannot have empty parts (e.g., "example..com")';
+      }
+    }
+
+    // Basic character validation (alphanumeric, hyphens, dots)
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/;
+    if (!domainRegex.test(domain)) {
+      return 'Domain name contains invalid characters';
+    }
+
+    return null; // Valid
+  }
+
+  onDomainChange(): void {
+    this.domainError = this.validateDomain(this.domainName);
+  }
+
   uploadImage(): void {
     if (!this.selectedFile) {
       this.error = 'Please select a file first';
@@ -76,12 +115,26 @@ export class UploadComponent {
       return;
     }
 
+    // Validate domain
+    const domainValidationError = this.validateDomain(this.domainName.trim());
+    if (domainValidationError) {
+      this.error = domainValidationError;
+      this.domainError = domainValidationError;
+      return;
+    }
+
     this.uploading = true;
     this.error = null;
+    this.domainError = null;
 
     const formData = new FormData();
     formData.append('file', this.selectedFile);
     formData.append('targetDomain', this.domainName.trim());
+
+    // Add metadata if provided
+    if (this.metadata.trim()) {
+      formData.append('metadata', this.metadata.trim());
+    }
 
     this.http
       .post<FaviconResponse>(`/api/favicons/upload`, formData)
