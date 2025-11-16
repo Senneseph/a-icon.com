@@ -1,5 +1,5 @@
-import { Component, OnInit, inject, computed, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, computed, effect, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
@@ -44,6 +44,7 @@ export class FaviconDetailComponent implements OnInit {
   private router = inject(Router);
   private meta = inject(Meta);
   private titleService = inject(Title);
+  private platformId = inject(PLATFORM_ID);
 
   // Fetch favicon data based on slug
   private faviconData = toSignal(
@@ -144,7 +145,12 @@ export class FaviconDetailComponent implements OnInit {
     return this.favicon()?.assets.filter((a) => a.type === type) || [];
   }
 
-  previewInBrowser() {
+  previewInBrowser(): void {
+    // Only run in browser, not during SSR
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
     const favicon = this.favicon();
     if (!favicon) return;
 
@@ -162,7 +168,7 @@ export class FaviconDetailComponent implements OnInit {
     }
   }
 
-  private changeFavicon(iconUrl: string) {
+  private changeFavicon(iconUrl: string): void {
     // Remove existing favicon links
     const existingLinks = document.querySelectorAll("link[rel*='icon']");
     existingLinks.forEach(link => link.remove());
@@ -179,6 +185,8 @@ export class FaviconDetailComponent implements OnInit {
     appleLink.rel = 'apple-touch-icon';
     appleLink.href = iconUrl;
     document.head.appendChild(appleLink);
+
+    console.log('[FaviconDetailComponent] Changed favicon to:', iconUrl);
   }
 }
 
