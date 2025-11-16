@@ -80,7 +80,8 @@ export class UploadComponent {
       .subscribe({
         next: (response) => {
           this.uploading = false;
-          this.result = response;
+          // Navigate to the favicon detail page upon successful upload
+          this.router.navigate(['/favicon', response.slug]);
         },
         error: (err) => {
           this.uploading = false;
