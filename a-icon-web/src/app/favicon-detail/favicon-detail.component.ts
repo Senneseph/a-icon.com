@@ -154,18 +154,8 @@ export class FaviconDetailComponent implements OnInit {
     const favicon = this.favicon();
     if (!favicon) return;
 
-    // Find the best favicon asset to use (prefer 32x32 PNG or ICO)
-    const preferredAsset = favicon.assets.find(a =>
-      (a.format === 'png' && a.size === 32) ||
-      (a.format === 'ico' && a.size === 32)
-    ) || favicon.assets.find(a => a.format === 'png') || favicon.assets[0];
-
-    if (preferredAsset) {
-      this.changeFavicon(preferredAsset.url);
-    } else {
-      // Fallback to source image if no assets available
-      this.changeFavicon(favicon.sourceUrl);
-    }
+    // Use source image directly (same as directory page)
+    this.changeFavicon(favicon.sourceUrl);
   }
 
   private changeFavicon(iconUrl: string): void {
