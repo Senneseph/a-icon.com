@@ -2,7 +2,6 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { environment } from '../../environments/environment';
 
 interface FaviconResponse {
   id: string;
@@ -77,7 +76,7 @@ export class UploadComponent {
     formData.append('file', this.selectedFile);
 
     this.http
-      .post<FaviconResponse>(`${environment.apiUrl}/api/favicons/upload`, formData)
+      .post<FaviconResponse>(`/api/favicons/upload`, formData)
       .subscribe({
         next: (response) => {
           this.uploading = false;
