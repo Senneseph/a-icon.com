@@ -28,6 +28,7 @@ build/
 *.swo
 *~
 *.tar
+*.zip
 
 # OS
 .DS_Store
