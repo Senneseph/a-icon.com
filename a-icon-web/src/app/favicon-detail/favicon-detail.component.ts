@@ -72,6 +72,13 @@ export class FaviconDetailComponent implements OnInit {
   error = computed(() => this.faviconData()?.error);
   loading = computed(() => !this.faviconData());
 
+  // Computed full published URL
+  fullPublishedUrl = computed(() => {
+    const favicon = this.favicon();
+    if (!favicon) return '';
+    return `https://a-icon.com/favicon/${favicon.slug}`;
+  });
+
   constructor() {
     // Update meta tags when favicon data changes
     effect(() => {
