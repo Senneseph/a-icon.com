@@ -116,6 +116,11 @@ export class DatabaseService implements OnModuleInit {
     return stmt.get(slug) as Favicon | undefined;
   }
 
+  getFaviconById(id: string): Favicon | undefined {
+    const stmt = this.db.prepare('SELECT * FROM favicons WHERE id = ?');
+    return stmt.get(id) as Favicon | undefined;
+  }
+
   updateFaviconStatus(
     id: string,
     status: 'PENDING' | 'SUCCESS' | 'FAILED',

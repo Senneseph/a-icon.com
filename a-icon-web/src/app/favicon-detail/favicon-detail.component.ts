@@ -9,7 +9,7 @@ import { catchError, map, of, switchMap } from 'rxjs';
 interface FaviconAsset {
   id: string;
   type: string;
-  size: number;
+  size: string; // e.g., "16x16", "32x32", "MULTI"
   format: string;
   mimeType: string;
   url: string;
@@ -149,6 +149,17 @@ export class FaviconDetailComponent implements OnInit {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  getAssetFilename(asset: FaviconAsset): string {
+    const favicon = this.favicon();
+    if (!favicon) return 'asset';
+
+    const domain = favicon.targetDomain || 'a-icon.com';
+    const size = asset.size === 'MULTI' ? 'favicon' : asset.size;
+    const extension = asset.format.startsWith('.') ? asset.format.substring(1) : asset.format;
+
+    return `${size}-${domain}.${extension}`;
   }
 
   formatDate(dateString: string): string {

@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 
@@ -20,7 +21,7 @@ interface FaviconResponse {
 @Component({
   selector: 'app-upload',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './upload.component.html',
   styleUrls: ['./upload.component.scss'],
 })
@@ -33,6 +34,7 @@ export class UploadComponent {
   uploading = false;
   error: string | null = null;
   result: FaviconResponse | null = null;
+  domainName = 'a-icon.com'; // Default domain name
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -69,11 +71,17 @@ export class UploadComponent {
       return;
     }
 
+    if (!this.domainName || this.domainName.trim() === '') {
+      this.error = 'Please enter a domain name';
+      return;
+    }
+
     this.uploading = true;
     this.error = null;
 
     const formData = new FormData();
     formData.append('file', this.selectedFile);
+    formData.append('targetDomain', this.domainName.trim());
 
     this.http
       .post<FaviconResponse>(`/api/favicons/upload`, formData)
