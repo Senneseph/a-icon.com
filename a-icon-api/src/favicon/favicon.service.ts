@@ -64,11 +64,19 @@ export class FaviconService {
 
   private async generateAssets(faviconId: string, slug: string, sourceBuffer: Buffer): Promise<void> {
     try {
+      // Get the favicon to retrieve the target domain
+      const favicon = this.db.getFaviconById(faviconId);
+      const domain = favicon?.target_domain || 'a-icon.com';
+
       const generatedAssets = await this.generator.generateFromImage(sourceBuffer);
 
       for (const asset of generatedAssets) {
         const assetId = nanoid();
-        const storageKey = `favicons/${slug}/${asset.size || 'multi'}${asset.format}`;
+        // New naming scheme: {{size}}x{{size}}-{{domain}}.{{extension}}
+        // For MULTI size ICO files, use 'favicon' as the size
+        const sizePrefix = asset.size === 'MULTI' ? 'favicon' : asset.size;
+        const filename = `${sizePrefix}-${domain}${asset.format}`;
+        const storageKey = `favicons/${slug}/${filename}`;
 
         await this.storage.putObject(storageKey, asset.buffer, asset.mimeType);
 

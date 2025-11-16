@@ -91,6 +91,45 @@
   }
 }
 
+.form-fields {
+  margin-top: 1.5rem;
+}
+
+.form-field {
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2d3748;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+
+    &:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    &::placeholder {
+      color: #999;
+    }
+  }
+
+  .field-hint {
+    margin: 0.5rem 0 0 0;
+    font-size: 0.85rem;
+    color: #666;
+  }
+}
+
 .actions {
   display: flex;
   gap: 1rem;

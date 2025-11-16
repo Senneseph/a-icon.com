@@ -132,7 +132,7 @@
                   </a>
                   <button
                     class="btn btn-small btn-secondary"
-                    (click)="downloadAsset(asset.url, favicon()!.slug + '-' + asset.size + '.' + asset.format)"
+                    (click)="downloadAsset(asset.url, getAssetFilename(asset))"
                     title="Download asset"
                   >
                     Download

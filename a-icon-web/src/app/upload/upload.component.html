@@ -39,8 +39,23 @@
           <p><strong>Size:</strong> {{ (selectedFile.size / 1024).toFixed(2) }} KB</p>
         </div>
 
+        <div class="form-fields">
+          <div class="form-field">
+            <label for="domainName">Domain Name *</label>
+            <input
+              id="domainName"
+              type="text"
+              [(ngModel)]="domainName"
+              placeholder="a-icon.com"
+              class="form-input"
+              required
+            />
+            <p class="field-hint">This will be included in the filename of each generated asset</p>
+          </div>
+        </div>
+
         <div class="actions">
-          <button class="btn btn-primary" (click)="uploadImage()" [disabled]="uploading">
+          <button class="btn btn-primary" (click)="uploadImage()" [disabled]="uploading || !domainName">
             @if (uploading) {
               <span>Generating...</span>
             } @else {
