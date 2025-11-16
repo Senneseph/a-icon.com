@@ -1,0 +1,94 @@
+<div class="directory-container">
+  <div class="header">
+    <h1>📁 Favicon Directory</h1>
+    <p class="subtitle">Browse all generated favicons</p>
+    <button class="btn btn-primary" (click)="goToUpload()">
+      ← Upload New Image
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Loading favicons...</p>
+    </div>
+  } @else if (error()) {
+    <div class="error-message">
+      <p>{{ error() }}</p>
+      <button class="btn btn-secondary" (click)="goToUpload()">
+        Go to Upload
+      </button>
+    </div>
+  } @else if (favicons().length === 0) {
+    <div class="empty-state">
+      <p>No favicons generated yet.</p>
+      <button class="btn btn-primary" (click)="goToUpload()">
+        Upload Your First Image
+      </button>
+    </div>
+  } @else {
+    <div class="controls">
+      <div class="sort-controls">
+        <span>Sort by:</span>
+        <button
+          class="sort-btn"
+          [class.active]="sortField() === 'createdAt'"
+          (click)="setSortField('createdAt')"
+        >
+          Date
+          @if (sortField() === 'createdAt') {
+            <span class="sort-arrow">{{ sortOrder() === 'asc' ? '↑' : '↓' }}</span>
+          }
+        </button>
+        <button
+          class="sort-btn"
+          [class.active]="sortField() === 'slug'"
+          (click)="setSortField('slug')"
+        >
+          Slug
+          @if (sortField() === 'slug') {
+            <span class="sort-arrow">{{ sortOrder() === 'asc' ? '↑' : '↓' }}</span>
+          }
+        </button>
+      </div>
+      <div class="count">
+        {{ favicons().length }} favicon{{ favicons().length !== 1 ? 's' : '' }}
+      </div>
+    </div>
+
+    <div class="favicons-grid">
+      @for (favicon of favicons(); track favicon.id) {
+        <div class="favicon-card">
+          <div class="favicon-preview">
+            <img
+              [src]="favicon.sourceUrl"
+              [alt]="favicon.slug"
+              loading="lazy"
+            />
+          </div>
+          <div class="favicon-info">
+            <h3 class="favicon-slug">{{ favicon.slug }}</h3>
+            <p class="favicon-date">{{ formatDate(favicon.createdAt) }}</p>
+            <p class="favicon-assets">{{ favicon.assetCount }} assets</p>
+          </div>
+          <div class="favicon-actions">
+            <a
+              [href]="favicon.sourceUrl"
+              target="_blank"
+              class="btn btn-small btn-view"
+            >
+              View
+            </a>
+            <button
+              class="btn btn-small btn-copy"
+              (click)="copyToClipboard(favicon.sourceUrl, $event)"
+            >
+              Copy URL
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
