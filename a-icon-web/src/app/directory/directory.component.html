@@ -72,6 +72,13 @@
             <p class="favicon-assets">{{ favicon.assetCount }} assets</p>
           </div>
           <div class="favicon-actions">
+            <button
+              class="btn btn-small btn-icon btn-preview"
+              (click)="previewInBrowser(favicon.sourceUrl, $event)"
+              title="Preview in browser tab"
+            >
+              ▶️
+            </button>
             <a
               [routerLink]="['/favicon', favicon.slug]"
               class="btn btn-small btn-view"

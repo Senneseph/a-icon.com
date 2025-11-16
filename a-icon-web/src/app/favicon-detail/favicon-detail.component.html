@@ -123,6 +123,13 @@
         <div class="action-buttons">
           <button
             class="btn btn-primary"
+            (click)="previewInBrowser()"
+            title="Preview this favicon in your current browser tab"
+          >
+            ▶️ Preview In Browser
+          </button>
+          <button
+            class="btn btn-primary"
             (click)="copyToClipboard(favicon()!.publishedUrl, $event)"
           >
             📋 Copy Published URL
