@@ -31,8 +31,8 @@ export class StorageController {
    * GET /api/storage/:key
    * Serve a stored file (for local dev; in production, use CDN/DO Spaces).
    */
-  @Get('*')
-  async getFile(@Param('0') key: string, @Res() res: Response) {
+  @Get('*path')
+  async getFile(@Param('path') key: string, @Res() res: Response) {
     try {
       const buffer = await this.storage.getObject(key);
       // Infer content type from extension
