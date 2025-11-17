@@ -44,6 +44,20 @@ Write-Host ""
 Write-Host "Deploying application from GitHub..." -ForegroundColor Green
 Write-Host ""
 
+# Generate admin password if not exists
+$ADMIN_PASSWORD_FILE = ".admin-password"
+if (-not (Test-Path $ADMIN_PASSWORD_FILE)) {
+    Write-Host "Generating admin password..." -ForegroundColor Yellow
+    $ADMIN_PASSWORD = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
+    Set-Content -Path $ADMIN_PASSWORD_FILE -Value $ADMIN_PASSWORD -NoNewline
+    Write-Host "Admin password generated and saved to $ADMIN_PASSWORD_FILE" -ForegroundColor Green
+} else {
+    Write-Host "Using existing admin password from $ADMIN_PASSWORD_FILE" -ForegroundColor Cyan
+    $ADMIN_PASSWORD = Get-Content -Path $ADMIN_PASSWORD_FILE -Raw
+}
+
+Write-Host ""
+
 # Deploy the application
 ssh -i $SSH_KEY ubuntu@$DROPLET_IP @"
 set -e
@@ -81,6 +95,10 @@ docker rm -f a-icon-api a-icon-web 2>/dev/null || true
 echo ''
 echo '=== Creating data directory ==='
 mkdir -p data
+
+echo ''
+echo '=== Setting admin password ==='
+echo "ADMIN_PASSWORD=$ADMIN_PASSWORD" > .env
 
 echo ''
 echo '=== Starting new containers ==='

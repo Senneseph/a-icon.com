@@ -14,6 +14,7 @@ services:
       PORT: 3000
       DB_PATH: /usr/src/app/data/a-icon.db
       STORAGE_ROOT: /usr/src/app/data/storage
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
     volumes:
       - ./data:/usr/src/app/data
     networks:

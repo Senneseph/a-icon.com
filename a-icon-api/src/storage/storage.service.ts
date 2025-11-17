@@ -1,5 +1,11 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
+import {
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  unlinkSync,
+} from 'fs';
 import { join } from 'path';
 
 export interface StoredObject {
@@ -34,6 +40,13 @@ export class StorageService implements OnModuleInit {
       throw new Error(`Object not found: ${key}`);
     }
     return readFileSync(filePath);
+  }
+
+  async deleteObject(key: string): Promise<void> {
+    const filePath = join(this.storageRoot, key);
+    if (existsSync(filePath)) {
+      unlinkSync(filePath);
+    }
   }
 
   getPublicUrl(key: string): string {
