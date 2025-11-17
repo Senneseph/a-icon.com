@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Admin credentials
+.admin-password
+
 # Terraform
 terraform/.terraform/
 terraform/.terraform.lock.hcl

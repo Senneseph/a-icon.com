@@ -6,7 +6,6 @@ import {
   Headers,
   UnauthorizedException,
   BadRequestException,
-  NotFoundException,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { DatabaseService } from '../database/database.service';
@@ -85,7 +84,11 @@ export class AdminController {
       throw new BadRequestException('ids array is required');
     }
 
-    const results = [];
+    const results: Array<{
+      id: string;
+      success: boolean;
+      error?: string;
+    }> = [];
 
     for (const id of ids) {
       try {
