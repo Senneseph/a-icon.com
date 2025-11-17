@@ -1,0 +1,116 @@
+<div class="admin-container">
+  @if (!isAuthenticated()) {
+    <!-- Login Form -->
+    <div class="login-card">
+      <h1>Admin Login</h1>
+      <p class="subtitle">Enter the admin password to manage favicons</p>
+
+      <form (ngSubmit)="login()" class="login-form">
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            [(ngModel)]="password"
+            name="password"
+            placeholder="Enter admin password"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+
+        @if (authError()) {
+          <div class="error-message">{{ authError() }}</div>
+        }
+
+        <button type="submit" class="btn-primary" [disabled]="!password">
+          Login
+        </button>
+      </form>
+    </div>
+  } @else {
+    <!-- Admin Directory -->
+    <div class="admin-header">
+      <h1>Admin Panel</h1>
+      <button (click)="logout()" class="btn-secondary">Logout</button>
+    </div>
+
+    <div class="admin-actions">
+      <div class="selection-info">
+        @if (selectedIds.size > 0) {
+          <span>{{ selectedIds.size }} selected</span>
+        } @else {
+          <span>No items selected</span>
+        }
+      </div>
+
+      <button
+        (click)="deleteSelected()"
+        class="btn-danger"
+        [disabled]="selectedIds.size === 0 || deleting()"
+      >
+        @if (deleting()) {
+          Deleting...
+        } @else {
+          Delete Selected
+        }
+      </button>
+    </div>
+
+    @if (deleteError()) {
+      <div class="error-message">{{ deleteError() }}</div>
+    }
+
+    @if (loading()) {
+      <div class="loading">Loading favicons...</div>
+    } @else if (error()) {
+      <div class="error-message">{{ error() }}</div>
+    } @else {
+      <div class="directory-table">
+        <table>
+          <thead>
+            <tr>
+              <th class="checkbox-col">
+                <input
+                  type="checkbox"
+                  [checked]="selectAll"
+                  (change)="toggleSelectAll()"
+                />
+              </th>
+              <th>Domain</th>
+              <th>Slug</th>
+              <th>Created</th>
+              <th>Assets</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (favicon of favicons(); track favicon.id) {
+              <tr [class.selected]="isSelected(favicon.id)">
+                <td class="checkbox-col">
+                  <input
+                    type="checkbox"
+                    [checked]="isSelected(favicon.id)"
+                    (change)="toggleSelection(favicon.id)"
+                  />
+                </td>
+                <td>{{ favicon.targetDomain || '(none)' }}</td>
+                <td>
+                  <a [href]="'/favicon/' + favicon.slug" target="_blank">
+                    {{ favicon.slug }}
+                  </a>
+                </td>
+                <td>{{ favicon.createdAt | date: 'short' }}</td>
+                <td>{{ favicon.assetCount }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="empty-state">No favicons found</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+

@@ -218,4 +218,17 @@ export class DatabaseService implements OnModuleInit {
     );
     return stmt.all(faviconId) as FaviconAsset[];
   }
+
+  // Admin operations
+  deleteFavicon(id: string): void {
+    const stmt = this.db.prepare('DELETE FROM favicons WHERE id = ?');
+    stmt.run(id);
+  }
+
+  deleteAssetsByFaviconId(faviconId: string): void {
+    const stmt = this.db.prepare(
+      'DELETE FROM favicon_assets WHERE favicon_id = ?',
+    );
+    stmt.run(faviconId);
+  }
 }
