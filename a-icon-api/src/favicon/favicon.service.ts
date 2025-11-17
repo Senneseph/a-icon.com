@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { nanoid } from 'nanoid';
+import { createHash } from 'crypto';
 import { DatabaseService, Favicon, FaviconAsset } from '../database/database.service';
 import { StorageService } from '../storage/storage.service';
 import { FaviconGeneratorService } from './favicon-generator.service';
@@ -22,10 +23,33 @@ export class FaviconService {
   ) {}
 
   /**
+   * Calculate MD5 hash of a buffer
+   */
+  private calculateHash(buffer: Buffer): string {
+    return createHash('md5').update(buffer).digest('hex');
+  }
+
+  /**
    * Create a new favicon from an uploaded image or canvas data.
    * Returns the favicon ID and slug.
+   * If a duplicate is detected (same hash and size), returns the existing favicon's slug.
    */
-  async createFavicon(dto: CreateFaviconDto): Promise<{ id: string; slug: string }> {
+  async createFavicon(dto: CreateFaviconDto): Promise<{ id: string; slug: string; isDuplicate?: boolean }> {
+    // Calculate hash and size for duplicate detection
+    const sourceHash = this.calculateHash(dto.sourceBuffer);
+    const sourceSize = dto.sourceBuffer.length;
+
+    // Check for existing favicon with same hash and size
+    const existingFavicon = this.db.findFaviconByHash(sourceHash, sourceSize);
+    if (existingFavicon) {
+      console.log(`Duplicate image detected. Redirecting to existing favicon: ${existingFavicon.slug}`);
+      return {
+        id: existingFavicon.id,
+        slug: existingFavicon.slug,
+        isDuplicate: true
+      };
+    }
+
     const id = nanoid();
     const slug = nanoid(10); // Short, URL-safe unique identifier
     const now = new Date().toISOString();
@@ -45,6 +69,8 @@ export class FaviconService {
       canonical_svg_key: null,
       source_type: dto.sourceType,
       source_original_mime: dto.sourceMimeType,
+      source_hash: sourceHash,
+      source_size: sourceSize,
       is_published: 1,
       created_at: now,
       updated_at: now,
@@ -63,7 +89,7 @@ export class FaviconService {
       this.db.updateFaviconStatus(id, 'FAILED', err.message, null);
     });
 
-    return { id, slug };
+    return { id, slug, isDuplicate: false };
   }
 
   private async generateAssets(faviconId: string, slug: string, sourceBuffer: Buffer, metadata?: string): Promise<void> {
