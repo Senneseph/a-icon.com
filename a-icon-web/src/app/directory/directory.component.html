@@ -32,11 +32,11 @@
         <span>Sort by:</span>
         <button
           class="sort-btn"
-          [class.active]="sortField() === 'createdAt'"
-          (click)="setSortField('createdAt')"
+          [class.active]="sortField() === 'domain'"
+          (click)="setSortField('domain')"
         >
-          Date
-          @if (sortField() === 'createdAt') {
+          Domain
+          @if (sortField() === 'domain') {
             <span class="sort-arrow">{{ sortOrder() === 'asc' ? '↑' : '↓' }}</span>
           }
         </button>
@@ -47,6 +47,16 @@
         >
           Slug
           @if (sortField() === 'slug') {
+            <span class="sort-arrow">{{ sortOrder() === 'asc' ? '↑' : '↓' }}</span>
+          }
+        </button>
+        <button
+          class="sort-btn"
+          [class.active]="sortField() === 'createdAt'"
+          (click)="setSortField('createdAt')"
+        >
+          Date
+          @if (sortField() === 'createdAt') {
             <span class="sort-arrow">{{ sortOrder() === 'asc' ? '↑' : '↓' }}</span>
           }
         </button>
@@ -69,7 +79,7 @@
           <div class="favicon-info">
             <h3 class="favicon-slug">{{ favicon.slug }}</h3>
             <p class="favicon-date">{{ formatDate(favicon.createdAt) }}</p>
-            <p class="favicon-assets">{{ favicon.assetCount }} assets</p>
+            <p class="favicon-domain">{{ favicon.targetDomain }}</p>
           </div>
           <div class="favicon-actions">
             <button

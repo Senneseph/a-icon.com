@@ -1,19 +1,19 @@
-import { Component, OnInit, inject, PLATFORM_ID, signal, computed } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { Component, inject, signal, effect } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, map, of } from 'rxjs';
+import { catchError, of } from 'rxjs';
 
 interface FaviconListItem {
   id: string;
   slug: string;
+  targetDomain: string | null;
   sourceUrl: string;
   createdAt: string;
   assetCount: number;
 }
 
-type SortField = 'createdAt' | 'slug';
+type SortField = 'createdAt' | 'slug' | 'domain';
 type SortOrder = 'asc' | 'desc';
 
 @Component({
@@ -23,46 +23,40 @@ type SortOrder = 'asc' | 'desc';
   templateUrl: './directory.component.html',
   styleUrls: ['./directory.component.scss'],
 })
-export class DirectoryComponent implements OnInit {
+export class DirectoryComponent {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private platformId = inject(PLATFORM_ID);
 
   // Signals for reactive state
-  sortField = signal<SortField>('createdAt');
-  sortOrder = signal<SortOrder>('desc');
+  sortField = signal<SortField>('domain');
+  sortOrder = signal<SortOrder>('asc');
 
-  // Computed URL based on sort parameters
-  private apiUrl = computed(() => {
-    const url = `/api/directory?sortBy=${this.sortField()}&order=${this.sortOrder()}`;
-    console.log('[DirectoryComponent] Computed URL:', url);
-    return url;
-  });
+  // Signals for data state
+  favicons = signal<FaviconListItem[]>([]);
+  loading = signal<boolean>(true);
+  error = signal<string | null>(null);
 
-  // Use toSignal to convert HTTP observable to signal - this properly handles SSR and hydration
-  private faviconData = toSignal(
-    computed(() => {
-      const url = this.apiUrl();
+  constructor() {
+    // Use effect to reactively fetch data when sort parameters change
+    effect(() => {
+      const url = `/api/directory?sortBy=${this.sortField()}&order=${this.sortOrder()}`;
       console.log('[DirectoryComponent] Fetching data from:', url);
-      return this.http.get<FaviconListItem[]>(url).pipe(
-        map(data => ({ data, error: null })),
+
+      this.loading.set(true);
+      this.error.set(null);
+
+      this.http.get<FaviconListItem[]>(url).pipe(
         catchError(err => {
           console.error('[DirectoryComponent] HTTP error:', err);
-          return of({ data: null, error: err.error?.message || 'Failed to load favicons' });
+          this.error.set(err.error?.message || 'Failed to load favicons');
+          this.loading.set(false);
+          return of([]);
         })
-      );
-    })(),
-    { initialValue: { data: null, error: null } }
-  );
-
-  // Computed properties for template
-  favicons = computed(() => this.faviconData().data || []);
-  loading = computed(() => this.faviconData().data === null && this.faviconData().error === null);
-  error = computed(() => this.faviconData().error);
-
-  ngOnInit(): void {
-    const isBrowser = isPlatformBrowser(this.platformId);
-    console.log(`[DirectoryComponent] ngOnInit called - Platform: ${isBrowser ? 'BROWSER' : 'SERVER'}`);
+      ).subscribe(data => {
+        this.favicons.set(data);
+        this.loading.set(false);
+      });
+    });
   }
 
   setSortField(field: SortField): void {
@@ -70,7 +64,8 @@ export class DirectoryComponent implements OnInit {
       this.sortOrder.set(this.sortOrder() === 'asc' ? 'desc' : 'asc');
     } else {
       this.sortField.set(field);
-      this.sortOrder.set('desc');
+      // Default to ascending for domain and slug, descending for date
+      this.sortOrder.set(field === 'createdAt' ? 'desc' : 'asc');
     }
   }
 
@@ -100,7 +95,7 @@ export class DirectoryComponent implements OnInit {
     event.stopPropagation();
 
     // Only run in browser, not during SSR
-    if (!isPlatformBrowser(this.platformId)) {
+    if (typeof document === 'undefined') {
       return;
     }
 
