@@ -189,5 +189,5 @@ Benjamin Hill (Senneseph)
 ## 🔗 Links
 
 - **Repository**: https://github.com/Senneseph/a-icon.com
-- **Production**: http://167.71.191.234:4200
+- **Production**: http://a-icon.com/
 
