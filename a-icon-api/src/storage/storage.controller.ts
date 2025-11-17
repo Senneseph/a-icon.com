@@ -32,8 +32,10 @@ export class StorageController {
    * Serve a stored file (for local dev; in production, use CDN/DO Spaces).
    */
   @Get('*path')
-  async getFile(@Param('path') key: string, @Res() res: Response) {
+  async getFile(@Param('path') keyParam: string | string[], @Res() res: Response) {
     try {
+      // NestJS wildcard routes return an array of path segments
+      const key = Array.isArray(keyParam) ? keyParam.join('/') : keyParam;
       const buffer = await this.storage.getObject(key);
       // Infer content type from extension
       const ext = key.split('.').pop()?.toLowerCase();
