@@ -124,7 +124,7 @@
                 <div class="asset-info">
                   <div class="asset-type">{{ asset.type }}</div>
                   <div class="asset-details">
-                    {{ asset.size }}x{{ asset.size }} • {{ asset.format.toUpperCase() }}
+                    {{ getAssetFilename(asset) }}
                   </div>
                 </div>
                 <div class="asset-actions">
