@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for a-icon-web (Angular SSR)
 
-# Builder stage
-FROM node:22.12-alpine AS builder
+# Builder stage - use dev variant with build tools
+FROM cgr.dev/chainguard/node:latest-dev AS builder
 
 ARG API_URL=http://localhost:3000
 ENV API_URL=$API_URL
@@ -22,8 +22,8 @@ RUN echo "export const environment = { production: true, apiUrl: '$API_URL' };" 
 # Build
 RUN npm run build
 
-# Production stage
-FROM node:22.12-alpine AS production
+# Production stage - use dev variant for native module support
+FROM cgr.dev/chainguard/node:latest-dev AS production
 
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
