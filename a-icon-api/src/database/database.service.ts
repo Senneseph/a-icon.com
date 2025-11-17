@@ -71,7 +71,6 @@ export class DatabaseService implements OnModuleInit {
       CREATE INDEX IF NOT EXISTS idx_favicons_published_url ON favicons(published_url);
       CREATE INDEX IF NOT EXISTS idx_favicons_target_domain ON favicons(target_domain);
       CREATE INDEX IF NOT EXISTS idx_favicons_is_published ON favicons(is_published);
-      CREATE INDEX IF NOT EXISTS idx_favicons_hash_size ON favicons(source_hash, source_size);
 
       CREATE TABLE IF NOT EXISTS favicon_assets (
         id TEXT PRIMARY KEY,
@@ -103,11 +102,9 @@ export class DatabaseService implements OnModuleInit {
       this.db.exec('ALTER TABLE favicons ADD COLUMN source_size INTEGER');
     }
 
-    // Create index if columns were just added
-    if (!hasSourceHash || !hasSourceSize) {
-      console.log('Creating index on source_hash and source_size...');
-      this.db.exec('CREATE INDEX IF NOT EXISTS idx_favicons_hash_size ON favicons(source_hash, source_size)');
-    }
+    // Always create/ensure the index exists (safe to run multiple times)
+    console.log('Ensuring index on source_hash and source_size exists...');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_favicons_hash_size ON favicons(source_hash, source_size)');
   }
 
   getDb(): Database.Database {
