@@ -49,9 +49,11 @@ export class UploadComponent {
         return;
       }
 
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        this.error = 'File size must be less than 10MB';
+      // Validate file size (max 0.5 MB)
+      const maxSize = 1 * 512 * 1024; // 0.5 MB aka 512kB
+      if (file.size > maxSize) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        this.error = `File size (${sizeMB}MB) exceeds the maximum allowed size of 0.5 MB`;
         return;
       }
 

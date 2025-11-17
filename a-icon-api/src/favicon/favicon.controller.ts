@@ -32,6 +32,32 @@ export class FaviconController {
       throw new BadRequestException('No file uploaded');
     }
 
+    // Validate file size (max 0.5 MB)
+    const maxSize = 1 * 512 * 1024; // 0.5 MB
+    if (file.size > maxSize) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      throw new BadRequestException(
+        `File size (${sizeMB}MB) exceeds the maximum allowed size of 0.5 MB`,
+      );
+    }
+
+    // Validate file type
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are allowed');
+    }
+
+    // Validate domain name if provided
+    if (targetDomain) {
+      this.validateDomain(targetDomain);
+    }
+
+    // Validate metadata length if provided
+    if (metadata && metadata.length > 256) {
+      throw new BadRequestException(
+        'Metadata must not exceed 256 characters',
+      );
+    }
+
     const result = await this.faviconService.createFavicon({
       sourceBuffer: file.buffer,
       sourceMimeType: file.mimetype,
@@ -63,6 +89,27 @@ export class FaviconController {
     // Extract base64 and convert to buffer
     const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
+
+    // Validate file size (max 4MB)
+    const maxSize = 4 * 1024 * 1024; // 4MB in bytes
+    if (buffer.length > maxSize) {
+      const sizeMB = (buffer.length / (1024 * 1024)).toFixed(2);
+      throw new BadRequestException(
+        `Image size (${sizeMB}MB) exceeds the maximum allowed size of 4MB`,
+      );
+    }
+
+    // Validate domain name if provided
+    if (targetDomain) {
+      this.validateDomain(targetDomain);
+    }
+
+    // Validate metadata length if provided
+    if (metadata && metadata.length > 256) {
+      throw new BadRequestException(
+        'Metadata must not exceed 256 characters',
+      );
+    }
 
     const result = await this.faviconService.createFavicon({
       sourceBuffer: buffer,
@@ -117,5 +164,50 @@ export class FaviconController {
         url: `/api/storage/${a.storage_key}`,
       })),
     };
+  }
+
+  /**
+   * Validate domain name format
+   * - Max 256 characters
+   * - Must contain a "." with content before and after it (TLD syntax)
+   */
+  private validateDomain(domain: string): void {
+    // Check length
+    if (domain.length > 256) {
+      throw new BadRequestException(
+        'Domain name must not exceed 256 characters',
+      );
+    }
+
+    // Check for dot presence
+    if (!domain.includes('.')) {
+      throw new BadRequestException(
+        'Domain name must contain at least one dot (.)',
+      );
+    }
+
+    // Check that there's content before and after the dot
+    const parts = domain.split('.');
+    if (parts.length < 2) {
+      throw new BadRequestException(
+        'Domain name must have content before and after the dot',
+      );
+    }
+
+    // Check that no part is empty
+    if (parts.some((part) => part.length === 0)) {
+      throw new BadRequestException(
+        'Domain name cannot have empty parts (e.g., "example..com")',
+      );
+    }
+
+    // Validate domain format with regex
+    const domainRegex =
+      /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+    if (!domainRegex.test(domain)) {
+      throw new BadRequestException(
+        'Invalid domain name format. Domain must contain only letters, numbers, hyphens, and dots, and follow TLD syntax',
+      );
+    }
   }
 }
