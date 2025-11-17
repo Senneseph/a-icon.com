@@ -11,6 +11,8 @@ export interface Favicon {
   canonical_svg_key: string | null;
   source_type: 'UPLOAD' | 'CANVAS';
   source_original_mime: string | null;
+  source_hash: string | null; // MD5 hash of source image for duplicate detection
+  source_size: number | null; // File size in bytes for duplicate detection
   is_published: number; // SQLite uses 0/1 for boolean
   created_at: string;
   updated_at: string;
@@ -53,6 +55,8 @@ export class DatabaseService implements OnModuleInit {
         canonical_svg_key TEXT,
         source_type TEXT NOT NULL CHECK(source_type IN ('UPLOAD', 'CANVAS')),
         source_original_mime TEXT,
+        source_hash TEXT,
+        source_size INTEGER,
         is_published INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -67,6 +71,7 @@ export class DatabaseService implements OnModuleInit {
       CREATE INDEX IF NOT EXISTS idx_favicons_published_url ON favicons(published_url);
       CREATE INDEX IF NOT EXISTS idx_favicons_target_domain ON favicons(target_domain);
       CREATE INDEX IF NOT EXISTS idx_favicons_is_published ON favicons(is_published);
+      CREATE INDEX IF NOT EXISTS idx_favicons_hash_size ON favicons(source_hash, source_size);
 
       CREATE TABLE IF NOT EXISTS favicon_assets (
         id TEXT PRIMARY KEY,
@@ -93,9 +98,9 @@ export class DatabaseService implements OnModuleInit {
     const stmt = this.db.prepare(`
       INSERT INTO favicons (
         id, slug, title, target_domain, published_url, canonical_svg_key,
-        source_type, source_original_mime, is_published, created_at, updated_at,
+        source_type, source_original_mime, source_hash, source_size, is_published, created_at, updated_at,
         generated_at, generation_status, generation_error, metadata, has_steganography
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       favicon.id,
@@ -106,6 +111,8 @@ export class DatabaseService implements OnModuleInit {
       favicon.canonical_svg_key,
       favicon.source_type,
       favicon.source_original_mime,
+      favicon.source_hash,
+      favicon.source_size,
       favicon.is_published,
       favicon.created_at,
       favicon.updated_at,
@@ -125,6 +132,13 @@ export class DatabaseService implements OnModuleInit {
   getFaviconById(id: string): Favicon | undefined {
     const stmt = this.db.prepare('SELECT * FROM favicons WHERE id = ?');
     return stmt.get(id) as Favicon | undefined;
+  }
+
+  findFaviconByHash(hash: string, size: number): Favicon | undefined {
+    const stmt = this.db.prepare(
+      'SELECT * FROM favicons WHERE source_hash = ? AND source_size = ? LIMIT 1'
+    );
+    return stmt.get(hash, size) as Favicon | undefined;
   }
 
   updateFaviconStatus(

@@ -90,12 +90,12 @@ export class FaviconController {
     const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
 
-    // Validate file size (max 4MB)
-    const maxSize = 4 * 1024 * 1024; // 4MB in bytes
+    // Validate file size (max 0.5 MB)
+    const maxSize = 1 * 512 * 1024; // 0.5 MB
     if (buffer.length > maxSize) {
       const sizeMB = (buffer.length / (1024 * 1024)).toFixed(2);
       throw new BadRequestException(
-        `Image size (${sizeMB}MB) exceeds the maximum allowed size of 4MB`,
+        `Image size (${sizeMB}MB) exceeds the maximum allowed size of 0.5 MB`,
       );
     }
 
