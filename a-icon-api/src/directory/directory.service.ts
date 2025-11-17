@@ -19,7 +19,7 @@ export class DirectoryService {
     // Map sortBy to column name
     const columnMap: Record<string, string> = {
       date: 'created_at',
-      url: 'published_url',
+      url: 'slug',
       domain: 'target_domain',
     };
     const orderColumn = columnMap[sortBy] || 'created_at';
