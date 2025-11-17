@@ -16,13 +16,14 @@ export class DirectoryController {
     const sortByMap: Record<string, 'date' | 'url' | 'domain'> = {
       createdAt: 'date',
       slug: 'url',
+      domain: 'domain',
     };
 
     const query = {
       page: Number(page) || 1,
       pageSize: Number(pageSize) || 100, // Increase default to show more items
-      sortBy: sortByMap[sortBy || 'createdAt'] || 'date',
-      sortDir: (order as 'asc' | 'desc') || 'desc',
+      sortBy: sortByMap[sortBy || 'domain'] || 'domain',
+      sortDir: (order as 'asc' | 'desc') || 'asc',
     };
 
     return this.directoryService.listPublishedFavicons(query);

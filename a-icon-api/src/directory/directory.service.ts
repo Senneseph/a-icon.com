@@ -43,6 +43,7 @@ export class DirectoryService {
       return {
         id: f.id,
         slug: f.slug,
+        targetDomain: f.target_domain,
         sourceUrl: `/api/storage/sources/${f.id}/original`,
         createdAt: f.created_at,
         assetCount,
