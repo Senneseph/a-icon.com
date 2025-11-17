@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for a-icon-api (NestJS)
 
-# Builder stage - use dev variant with build tools
-FROM cgr.dev/chainguard/node:latest-dev AS builder
+# Builder stage
+FROM node:22.12-alpine AS builder
 
 WORKDIR /usr/src/app
 
@@ -13,8 +13,8 @@ RUN npm ci
 COPY . ./
 RUN npm run build
 
-# Production stage - use dev variant for native module support
-FROM cgr.dev/chainguard/node:latest-dev AS production
+# Production stage
+FROM node:22.12-alpine AS production
 
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
