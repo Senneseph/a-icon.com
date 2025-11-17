@@ -6,7 +6,14 @@
 
   @if (!result) {
     <div class="upload-section">
-      <div class="upload-box" (click)="fileInput.click()">
+      <div
+        class="upload-box"
+        [class.dragging]="isDragging"
+        (click)="fileInput.click()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event)"
+      >
         @if (previewUrl) {
           <img [src]="previewUrl" alt="Preview" class="preview-image" />
         } @else {
@@ -17,7 +24,8 @@
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
             <p>Click to select an image</p>
-            <p class="hint">PNG, JPG, WebP, or SVG (max 10MB)</p>
+            <p class="hint">or drag and drop here</p>
+            <p class="hint">PNG, JPG, WebP, or SVG (max 0.5 MB)</p>
           </div>
         }
         <input

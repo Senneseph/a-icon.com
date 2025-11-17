@@ -37,36 +37,62 @@ export class UploadComponent {
   domainName = 'a-icon.com'; // Default domain name
   domainError: string | null = null;
   metadata = ''; // Optional secret metadata
+  isDragging = false; // Track drag state for visual feedback
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
-      const file = input.files[0];
-
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        this.error = 'Please select an image file';
-        return;
-      }
-
-      // Validate file size (max 0.5 MB)
-      const maxSize = 1 * 512 * 1024; // 0.5 MB aka 512kB
-      if (file.size > maxSize) {
-        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-        this.error = `File size (${sizeMB}MB) exceeds the maximum allowed size of 0.5 MB`;
-        return;
-      }
-
-      this.selectedFile = file;
-      this.error = null;
-
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.previewUrl = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+      this.handleFile(input.files[0]);
     }
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      this.handleFile(files[0]);
+    }
+  }
+
+  private handleFile(file: File): void {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      this.error = 'Please select an image file';
+      return;
+    }
+
+    // Validate file size (max 0.5 MB)
+    const maxSize = 1 * 512 * 1024; // 0.5 MB aka 512kB
+    if (file.size > maxSize) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      this.error = `File size (${sizeMB}MB) exceeds the maximum allowed size of 0.5 MB`;
+      return;
+    }
+
+    this.selectedFile = file;
+    this.error = null;
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.previewUrl = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   }
 
   validateDomain(domain: string): string | null {
