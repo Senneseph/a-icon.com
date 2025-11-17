@@ -87,6 +87,27 @@ export class DatabaseService implements OnModuleInit {
 
       CREATE INDEX IF NOT EXISTS idx_favicon_assets_favicon_id ON favicon_assets(favicon_id);
     `);
+
+    // Add source_hash and source_size columns if they don't exist (migration)
+    const tableInfo = this.db.pragma('table_info(favicons)') as Array<{ name: string }>;
+    const hasSourceHash = tableInfo.some((col) => col.name === 'source_hash');
+    const hasSourceSize = tableInfo.some((col) => col.name === 'source_size');
+
+    if (!hasSourceHash) {
+      console.log('Adding source_hash column to favicons table...');
+      this.db.exec('ALTER TABLE favicons ADD COLUMN source_hash TEXT');
+    }
+
+    if (!hasSourceSize) {
+      console.log('Adding source_size column to favicons table...');
+      this.db.exec('ALTER TABLE favicons ADD COLUMN source_size INTEGER');
+    }
+
+    // Create index if columns were just added
+    if (!hasSourceHash || !hasSourceSize) {
+      console.log('Creating index on source_hash and source_size...');
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_favicons_hash_size ON favicons(source_hash, source_size)');
+    }
   }
 
   getDb(): Database.Database {
