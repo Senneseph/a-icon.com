@@ -11,7 +11,10 @@ export class StorageController {
    * Serve the original source image for a favicon
    */
   @Get('sources/:faviconId/original')
-  async getSourceImage(@Param('faviconId') faviconId: string, @Res() res: Response) {
+  async getSourceImage(
+    @Param('faviconId') faviconId: string,
+    @Res() res: Response,
+  ) {
     try {
       const key = `sources/${faviconId}/original`;
       const buffer = await this.storage.getObject(key);
@@ -22,6 +25,7 @@ export class StorageController {
       res.setHeader('Content-Type', contentType);
       res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
       res.send(buffer);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       throw new NotFoundException('Source image not found');
     }
@@ -32,7 +36,10 @@ export class StorageController {
    * Serve a stored file (for local dev; in production, use CDN/DO Spaces).
    */
   @Get('*path')
-  async getFile(@Param('path') keyParam: string | string[], @Res() res: Response) {
+  async getFile(
+    @Param('path') keyParam: string | string[],
+    @Res() res: Response,
+  ) {
     try {
       // NestJS wildcard routes return an array of path segments
       const key = Array.isArray(keyParam) ? keyParam.join('/') : keyParam;
@@ -50,6 +57,7 @@ export class StorageController {
       res.setHeader('Content-Type', contentType);
       res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
       res.send(buffer);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       throw new NotFoundException('File not found');
     }
@@ -63,7 +71,12 @@ export class StorageController {
     if (buffer.length < 4) return 'application/octet-stream';
 
     // PNG: 89 50 4E 47
-    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+    if (
+      buffer[0] === 0x89 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x4e &&
+      buffer[3] === 0x47
+    ) {
       return 'image/png';
     }
 
@@ -87,4 +100,3 @@ export class StorageController {
     return 'image/png';
   }
 }
-
