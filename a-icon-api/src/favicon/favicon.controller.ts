@@ -53,9 +53,7 @@ export class FaviconController {
 
     // Validate metadata length if provided
     if (metadata && metadata.length > 256) {
-      throw new BadRequestException(
-        'Metadata must not exceed 256 characters',
-      );
+      throw new BadRequestException('Metadata must not exceed 256 characters');
     }
 
     const result = await this.faviconService.createFavicon({
@@ -106,9 +104,7 @@ export class FaviconController {
 
     // Validate metadata length if provided
     if (metadata && metadata.length > 256) {
-      throw new BadRequestException(
-        'Metadata must not exceed 256 characters',
-      );
+      throw new BadRequestException('Metadata must not exceed 256 characters');
     }
 
     const result = await this.faviconService.createFavicon({
