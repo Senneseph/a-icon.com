@@ -88,12 +88,16 @@ export class DatabaseService implements OnModuleInit {
       CREATE INDEX IF NOT EXISTS idx_favicon_assets_favicon_id ON favicon_assets(favicon_id);
     `);
 
-    // Add source_hash and source_size columns if they don't exist (migration)
+    // Add missing columns if they don't exist (migration)
     const tableInfo = this.db.pragma('table_info(favicons)') as Array<{
       name: string;
     }>;
     const hasSourceHash = tableInfo.some((col) => col.name === 'source_hash');
     const hasSourceSize = tableInfo.some((col) => col.name === 'source_size');
+    const hasMetadata = tableInfo.some((col) => col.name === 'metadata');
+    const hasSteganography = tableInfo.some(
+      (col) => col.name === 'has_steganography',
+    );
 
     if (!hasSourceHash) {
       console.log('Adding source_hash column to favicons table...');
@@ -103,6 +107,18 @@ export class DatabaseService implements OnModuleInit {
     if (!hasSourceSize) {
       console.log('Adding source_size column to favicons table...');
       this.db.exec('ALTER TABLE favicons ADD COLUMN source_size INTEGER');
+    }
+
+    if (!hasMetadata) {
+      console.log('Adding metadata column to favicons table...');
+      this.db.exec('ALTER TABLE favicons ADD COLUMN metadata TEXT');
+    }
+
+    if (!hasSteganography) {
+      console.log('Adding has_steganography column to favicons table...');
+      this.db.exec(
+        'ALTER TABLE favicons ADD COLUMN has_steganography INTEGER NOT NULL DEFAULT 0',
+      );
     }
 
     // Always create/ensure the index exists (safe to run multiple times)
