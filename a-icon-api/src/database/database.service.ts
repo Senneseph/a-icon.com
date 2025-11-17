@@ -39,7 +39,8 @@ export class DatabaseService implements OnModuleInit {
   private db: Database.Database;
 
   onModuleInit() {
-    const dbPath = process.env.DB_PATH || join(process.cwd(), 'data', 'a-icon.db');
+    const dbPath =
+      process.env.DB_PATH || join(process.cwd(), 'data', 'a-icon.db');
     this.db = new Database(dbPath);
     this.initSchema();
   }
@@ -88,7 +89,9 @@ export class DatabaseService implements OnModuleInit {
     `);
 
     // Add source_hash and source_size columns if they don't exist (migration)
-    const tableInfo = this.db.pragma('table_info(favicons)') as Array<{ name: string }>;
+    const tableInfo = this.db.pragma('table_info(favicons)') as Array<{
+      name: string;
+    }>;
     const hasSourceHash = tableInfo.some((col) => col.name === 'source_hash');
     const hasSourceSize = tableInfo.some((col) => col.name === 'source_size');
 
@@ -104,7 +107,9 @@ export class DatabaseService implements OnModuleInit {
 
     // Always create/ensure the index exists (safe to run multiple times)
     console.log('Ensuring index on source_hash and source_size exists...');
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_favicons_hash_size ON favicons(source_hash, source_size)');
+    this.db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_favicons_hash_size ON favicons(source_hash, source_size)',
+    );
   }
 
   getDb(): Database.Database {
@@ -154,7 +159,7 @@ export class DatabaseService implements OnModuleInit {
 
   findFaviconByHash(hash: string, size: number): Favicon | undefined {
     const stmt = this.db.prepare(
-      'SELECT * FROM favicons WHERE source_hash = ? AND source_size = ? LIMIT 1'
+      'SELECT * FROM favicons WHERE source_hash = ? AND source_size = ? LIMIT 1',
     );
     return stmt.get(hash, size) as Favicon | undefined;
   }
@@ -192,8 +197,9 @@ export class DatabaseService implements OnModuleInit {
   }
 
   getAssetsByFaviconId(faviconId: string): FaviconAsset[] {
-    const stmt = this.db.prepare('SELECT * FROM favicon_assets WHERE favicon_id = ?');
+    const stmt = this.db.prepare(
+      'SELECT * FROM favicon_assets WHERE favicon_id = ?',
+    );
     return stmt.all(faviconId) as FaviconAsset[];
   }
 }
-
