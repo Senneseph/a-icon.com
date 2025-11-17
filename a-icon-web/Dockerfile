@@ -3,8 +3,8 @@
 # Builder stage
 FROM node:24-alpine AS builder
 
-# Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++
+# Install build dependencies for native modules and curl for health checks
+RUN apk add --no-cache python3 make g++ curl
 
 ARG API_URL=http://localhost:3000
 ENV API_URL=$API_URL
@@ -28,8 +28,8 @@ RUN npm run build
 # Production stage
 FROM node:24-alpine AS production
 
-# Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++
+# Install build dependencies for native modules and curl for health checks
+RUN apk add --no-cache python3 make g++ curl
 
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
