@@ -14,6 +14,7 @@ const angularApp = new AngularNodeAppEngine();
 
 /**
  * Proxy API requests to the backend API server
+ * Note: We bypass this proxy for file uploads by making direct requests from the browser
  */
 app.use('/api', async (req, res, next) => {
   const apiUrl = process.env['API_URL_SSR'] || 'http://api:3000';
@@ -22,10 +23,17 @@ app.use('/api', async (req, res, next) => {
   console.log(`[API Proxy] ${req.method} ${req.originalUrl} -> ${targetUrl}`);
 
   try {
+    // For multipart/form-data or other non-JSON requests, we need to forward the raw body
+    // However, Express doesn't parse the body by default, so we need to collect it
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    await new Promise((resolve) => req.on('end', resolve));
+    const rawBody = Buffer.concat(chunks);
+
     const response = await fetch(targetUrl, {
       method: req.method,
       headers: req.headers as HeadersInit,
-      body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
+      body: req.method !== 'GET' && req.method !== 'HEAD' ? rawBody : undefined,
     });
 
     console.log(`[API Proxy] Response: ${response.status}`);
