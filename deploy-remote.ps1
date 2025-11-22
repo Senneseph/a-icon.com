@@ -4,9 +4,9 @@
 $ErrorActionPreference = "Stop"
 
 # Get droplet IP from Terraform output
-cd terraform
+Set-Location terraform
 $DROPLET_IP = (.\terraform.exe output -raw droplet_ip)
-cd ..
+Set-Location ..
 
 Write-Host "=== Deploying to a-icon.com ===" -ForegroundColor Green
 Write-Host "Droplet IP: $DROPLET_IP" -ForegroundColor Cyan
