@@ -107,6 +107,26 @@ This script will:
 - Build Docker images on the server
 - Start the containers with production configuration
 
+### Static Site Hosting
+
+The a-icon.com droplet can also host multiple static websites with automatic SSL:
+
+```powershell
+# Add a static site
+.\add-static-site.ps1 -Domain "iffuso.com"
+
+# Add a subdomain
+.\add-static-site.ps1 -Domain "iffuso.com" -Subdomain "angular-press" -SourcePath "./dist"
+
+# List all sites
+.\list-static-sites.ps1
+
+# Remove a site
+.\remove-static-site.ps1 -Domain "iffuso.com"
+```
+
+See [STATIC-HOSTING.md](./STATIC-HOSTING.md) for complete documentation.
+
 ### Manual Deployment
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
