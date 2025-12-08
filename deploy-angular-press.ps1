@@ -58,26 +58,46 @@ if (-not $SkipBuild) {
             npm install
         }
 
-        # Detect build tool (Angular CLI vs Vite)
-        $packageJson = Get-Content "package.json" -Raw | ConvertFrom-Json
-        $buildScript = $packageJson.scripts.build
-
+        # Build for production
         Write-Host "  Building for production..." -ForegroundColor Cyan
 
-        if ($buildScript -like "*vite*") {
-            # Vite build (no --configuration flag)
-            Write-Host "  Detected Vite build" -ForegroundColor Cyan
-            npm run build
+        # Check if package.json has a build:prod or build script
+        $packageJson = Get-Content "package.json" -Raw | ConvertFrom-Json
+
+        if ($packageJson.scripts.'build:prod') {
+            # Use build:prod if available
+            Write-Host "  Using build:prod script" -ForegroundColor Cyan
+            npm run build:prod
         }
-        elseif ($buildScript -like "*ng build*") {
-            # Angular CLI build
-            Write-Host "  Detected Angular CLI build" -ForegroundColor Cyan
-            npm run build -- --configuration production
+        elseif ($packageJson.scripts.build) {
+            $buildScript = $packageJson.scripts.build
+
+            if ($buildScript -like "*vite*") {
+                # Vite build (no --configuration flag)
+                Write-Host "  Detected Vite build" -ForegroundColor Cyan
+                npm run build
+            }
+            elseif ($buildScript -like "*ng build*") {
+                # Angular CLI build - try client-only build first for static hosting
+                Write-Host "  Detected Angular CLI build" -ForegroundColor Cyan
+                Write-Host "  Attempting client-only build for static hosting..." -ForegroundColor Cyan
+
+                # Try building with --output-mode=static to skip SSR
+                npm run build -- --configuration production --output-mode=static 2>$null
+
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "  Static build failed, trying standard build..." -ForegroundColor Yellow
+                    npm run build -- --configuration production
+                }
+            }
+            else {
+                # Generic build
+                Write-Host "  Using generic build command" -ForegroundColor Cyan
+                npm run build
+            }
         }
         else {
-            # Generic build
-            Write-Host "  Using generic build command" -ForegroundColor Cyan
-            npm run build
+            throw "No build script found in package.json"
         }
 
         if ($LASTEXITCODE -ne 0) {
