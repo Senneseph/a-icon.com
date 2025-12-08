@@ -1,4 +1,5 @@
-use crate::error::{ApiError, ApiResult};
+use crate::error::HandlerError;
+use crate::db_err;
 use crate::models::{Favicon, FaviconAsset, SourceType, GenerationStatus, AssetType, DirectoryItem};
 use rusqlite::{Connection, params, OptionalExtension};
 use chrono::{DateTime, Utc};
@@ -9,17 +10,16 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new<P: AsRef<Path>>(db_path: P) -> ApiResult<Self> {
-        let conn = Connection::open(db_path)
-            .map_err(|e| ApiError::DatabaseError(e))?;
-        
+    pub fn new<P: AsRef<Path>>(db_path: P) -> Result<Self, HandlerError> {
+        let conn = db_err!(Connection::open(db_path))?;
+
         let db = Database { conn };
         db.init_schema()?;
         Ok(db)
     }
 
-    fn init_schema(&self) -> ApiResult<()> {
-        self.conn.execute_batch(
+    fn init_schema(&self) -> Result<(), HandlerError> {
+        db_err!(self.conn.execute_batch(
             r#"
             CREATE TABLE IF NOT EXISTS favicons (
                 id TEXT PRIMARY KEY,
@@ -62,20 +62,20 @@ impl Database {
 
             CREATE INDEX IF NOT EXISTS idx_favicon_assets_favicon_id ON favicon_assets(favicon_id);
             "#
-        )?;
+        ))?;
         Ok(())
     }
 
-    pub fn get_favicon_by_id(&self, id: &str) -> ApiResult<Option<Favicon>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, slug, title, target_domain, published_url, canonical_svg_key, 
+    pub fn get_favicon_by_id(&self, id: &str) -> Result<Option<Favicon>, HandlerError> {
+        let mut stmt = db_err!(self.conn.prepare(
+            "SELECT id, slug, title, target_domain, published_url, canonical_svg_key,
                     source_type, source_original_mime, source_hash, source_size, is_published,
                     created_at, updated_at, generated_at, generation_status, generation_error,
                     metadata, has_steganography
              FROM favicons WHERE id = ?"
-        )?;
+        ))?;
 
-        let favicon = stmt.query_row([id], |row| {
+        let favicon = db_err!(stmt.query_row([id], |row| {
             Ok(Favicon {
                 id: row.get(0)?,
                 slug: row.get(1)?,
@@ -99,21 +99,21 @@ impl Database {
                 metadata: row.get(16)?,
                 has_steganography: row.get::<_, i32>(17)? == 1,
             })
-        }).optional()?;
+        }).optional())?;
 
         Ok(favicon)
     }
 
-    pub fn get_favicon_by_slug(&self, slug: &str) -> ApiResult<Option<Favicon>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, slug, title, target_domain, published_url, canonical_svg_key, 
+    pub fn get_favicon_by_slug(&self, slug: &str) -> Result<Option<Favicon>, HandlerError> {
+        let mut stmt = db_err!(self.conn.prepare(
+            "SELECT id, slug, title, target_domain, published_url, canonical_svg_key,
                     source_type, source_original_mime, source_hash, source_size, is_published,
                     created_at, updated_at, generated_at, generation_status, generation_error,
                     metadata, has_steganography
              FROM favicons WHERE slug = ?"
-        )?;
+        ))?;
 
-        let favicon = stmt.query_row([slug], |row| {
+        let favicon = db_err!(stmt.query_row([slug], |row| {
             Ok(Favicon {
                 id: row.get(0)?,
                 slug: row.get(1)?,
@@ -137,18 +137,18 @@ impl Database {
                 metadata: row.get(16)?,
                 has_steganography: row.get::<_, i32>(17)? == 1,
             })
-        }).optional()?;
+        }).optional())?;
 
         Ok(favicon)
     }
 
-    pub fn find_duplicate(&self, hash: &str, size: i64) -> ApiResult<Option<Favicon>> {
-        let mut stmt = self.conn.prepare(
+    pub fn find_duplicate(&self, hash: &str, size: i64) -> Result<Option<Favicon>, HandlerError> {
+        let mut stmt = db_err!(self.conn.prepare(
             "SELECT id FROM favicons WHERE source_hash = ? AND source_size = ? LIMIT 1"
-        )?;
+        ))?;
 
-        let id: Option<String> = stmt.query_row(params![hash, size], |row| row.get(0))
-            .optional()?;
+        let id: Option<String> = db_err!(stmt.query_row(params![hash, size], |row| row.get(0))
+            .optional())?;
 
         match id {
             Some(id) => self.get_favicon_by_id(&id),
@@ -156,8 +156,8 @@ impl Database {
         }
     }
 
-    pub fn insert_favicon(&self, favicon: &Favicon) -> ApiResult<()> {
-        self.conn.execute(
+    pub fn insert_favicon(&self, favicon: &Favicon) -> Result<(), HandlerError> {
+        db_err!(self.conn.execute(
             "INSERT INTO favicons (
                 id, slug, title, target_domain, published_url, canonical_svg_key,
                 source_type, source_original_mime, source_hash, source_size, is_published,
@@ -184,12 +184,12 @@ impl Database {
                 favicon.metadata,
                 if favicon.has_steganography { 1 } else { 0 },
             ]
-        )?;
+        ))?;
         Ok(())
     }
 
-    pub fn update_favicon(&self, favicon: &Favicon) -> ApiResult<()> {
-        self.conn.execute(
+    pub fn update_favicon(&self, favicon: &Favicon) -> Result<(), HandlerError> {
+        db_err!(self.conn.execute(
             "UPDATE favicons SET
                 slug = ?, title = ?, target_domain = ?, published_url = ?, canonical_svg_key = ?,
                 source_type = ?, source_original_mime = ?, source_hash = ?, source_size = ?,
@@ -215,22 +215,22 @@ impl Database {
                 if favicon.has_steganography { 1 } else { 0 },
                 favicon.id,
             ]
-        )?;
+        ))?;
         Ok(())
     }
 
-    pub fn delete_favicon(&self, id: &str) -> ApiResult<()> {
-        self.conn.execute("DELETE FROM favicons WHERE id = ?", [id])?;
+    pub fn delete_favicon(&self, id: &str) -> Result<(), HandlerError> {
+        db_err!(self.conn.execute("DELETE FROM favicons WHERE id = ?", [id]))?;
         Ok(())
     }
 
-    pub fn get_assets_by_favicon_id(&self, favicon_id: &str) -> ApiResult<Vec<FaviconAsset>> {
-        let mut stmt = self.conn.prepare(
+    pub fn get_assets_by_favicon_id(&self, favicon_id: &str) -> Result<Vec<FaviconAsset>, HandlerError> {
+        let mut stmt = db_err!(self.conn.prepare(
             "SELECT id, favicon_id, type, size, format, storage_key, mime_type, created_at
              FROM favicon_assets WHERE favicon_id = ?"
-        )?;
+        ))?;
 
-        let assets = stmt.query_map([favicon_id], |row| {
+        let assets = db_err!(db_err!(stmt.query_map([favicon_id], |row| {
             Ok(FaviconAsset {
                 id: row.get(0)?,
                 favicon_id: row.get(1)?,
@@ -242,14 +242,14 @@ impl Database {
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(7)?)
                     .unwrap().with_timezone(&Utc),
             })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        }))?
+        .collect::<Result<Vec<_>, _>>())?;
 
         Ok(assets)
     }
 
-    pub fn insert_asset(&self, asset: &FaviconAsset) -> ApiResult<()> {
-        self.conn.execute(
+    pub fn insert_asset(&self, asset: &FaviconAsset) -> Result<(), HandlerError> {
+        db_err!(self.conn.execute(
             "INSERT INTO favicon_assets (id, favicon_id, type, size, format, storage_key, mime_type, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             params![
@@ -262,12 +262,12 @@ impl Database {
                 asset.mime_type,
                 asset.created_at.to_rfc3339(),
             ]
-        )?;
+        ))?;
         Ok(())
     }
 
-    pub fn delete_assets_by_favicon_id(&self, favicon_id: &str) -> ApiResult<()> {
-        self.conn.execute("DELETE FROM favicon_assets WHERE favicon_id = ?", [favicon_id])?;
+    pub fn delete_assets_by_favicon_id(&self, favicon_id: &str) -> Result<(), HandlerError> {
+        db_err!(self.conn.execute("DELETE FROM favicon_assets WHERE favicon_id = ?", [favicon_id]))?;
         Ok(())
     }
 
@@ -277,13 +277,13 @@ impl Database {
         page_size: i64,
         sort_by: &str,
         sort_dir: &str,
-    ) -> ApiResult<(Vec<DirectoryItem>, i64)> {
+    ) -> Result<(Vec<DirectoryItem>, i64), HandlerError> {
         // Get total count
-        let total: i64 = self.conn.query_row(
+        let total: i64 = db_err!(self.conn.query_row(
             "SELECT COUNT(*) FROM favicons WHERE is_published = 1",
             [],
             |row| row.get(0)
-        )?;
+        ))?;
 
         // Map sort_by to column name
         let column = match sort_by {
@@ -303,8 +303,8 @@ impl Database {
             column, order
         );
 
-        let mut stmt = self.conn.prepare(&query)?;
-        let items = stmt.query_map(params![page_size, offset], |row| {
+        let mut stmt = db_err!(self.conn.prepare(&query))?;
+        let items = db_err!(db_err!(stmt.query_map(params![page_size, offset], |row| {
             Ok(DirectoryItem {
                 id: row.get(0)?,
                 slug: row.get(1)?,
@@ -313,8 +313,8 @@ impl Database {
                 published_url: row.get(4)?,
                 created_at: row.get(5)?,
             })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        }))?
+        .collect::<Result<Vec<_>, _>>())?;
 
         Ok((items, total))
     }

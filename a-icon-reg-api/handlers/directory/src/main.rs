@@ -2,25 +2,24 @@ use rust_edge_gateway_sdk::{prelude::*, handler_loop};
 use a_icon_shared::{
     database::Database,
     models::DirectoryResponse,
-    error::ApiError,
 };
 use std::env;
 
 fn handle(req: Request) -> Response {
     match handle_directory(&req) {
         Ok(response) => response,
-        Err(e) => Response::json(e.status_code(), json!(e.to_json())),
+        Err(e) => e.to_response(),
     }
 }
 
-fn handle_directory(req: &Request) -> Result<Response, ApiError> {
+fn handle_directory(req: &Request) -> Result<Response, HandlerError> {
     // Parse query parameters
-    let page = req.query.get("page")
-        .and_then(|p| p.parse::<i64>().ok())
+    let page: i64 = req.query.get("page")
+        .and_then(|p| p.parse().ok())
         .unwrap_or(1);
 
-    let page_size = req.query.get("pageSize")
-        .and_then(|p| p.parse::<i64>().ok())
+    let page_size: i64 = req.query.get("pageSize")
+        .and_then(|p| p.parse().ok())
         .unwrap_or(100)
         .min(500); // Max 500 items per page
 

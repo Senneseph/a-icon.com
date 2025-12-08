@@ -1,20 +1,6 @@
 services:
-  api:
-    build:
-      context: ./a-icon-api
-    container_name: a-icon-api
-    restart: unless-stopped
-    environment:
-      NODE_ENV: development
-      PORT: 3000
-      # SQLite database path (local filesystem)
-      DB_PATH: /usr/src/app/data/a-icon.db
-      # Local filesystem storage
-      STORAGE_ROOT: /usr/src/app/data/storage
-    ports:
-      - '3000:3000'
-    volumes:
-      - api-data:/usr/src/app/data
+  # API service removed - migrated to Rust Edge Gateway
+  # See a-icon-reg-api/ for new Rust handlers
 
   web:
     build:
@@ -26,12 +12,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      # Server-side API URL (for SSR) - uses Docker network
-      API_URL_SSR: http://api:3000
+      # Server-side API URL (for SSR) - now points to Rust Edge Gateway
+      API_URL_SSR: http://rust-edge-gateway:8080
     ports:
       - '4200:4000'
-    depends_on:
-      - api
 
 volumes:
   api-data:

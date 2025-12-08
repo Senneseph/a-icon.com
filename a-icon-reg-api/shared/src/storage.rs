@@ -1,4 +1,4 @@
-use crate::error::{ApiError, ApiResult};
+use crate::error::HandlerError;
 use aws_sdk_s3::{Client, Config, config::Region, primitives::ByteStream};
 use aws_config::meta::region::RegionProviderChain;
 use std::env;
@@ -9,7 +9,7 @@ pub struct StorageService {
 }
 
 impl StorageService {
-    pub async fn new() -> ApiResult<Self> {
+    pub async fn new() -> Result<Self, HandlerError> {
         let endpoint = env::var("S3_ENDPOINT")
             .unwrap_or_else(|_| "https://nyc3.digitaloceanspaces.com".to_string());
         let region = env::var("S3_REGION")
@@ -30,7 +30,7 @@ impl StorageService {
         Ok(StorageService { client, bucket })
     }
 
-    pub async fn upload_object(&self, key: &str, data: Vec<u8>, content_type: &str) -> ApiResult<()> {
+    pub async fn upload_object(&self, key: &str, data: Vec<u8>, content_type: &str) -> Result<(), HandlerError> {
         self.client
             .put_object()
             .bucket(&self.bucket)
@@ -39,34 +39,34 @@ impl StorageService {
             .content_type(content_type)
             .send()
             .await
-            .map_err(|e| ApiError::StorageError(format!("Failed to upload object: {}", e)))?;
+            .map_err(|e| HandlerError::StorageError(format!("Failed to upload object: {}", e)))?;
 
         Ok(())
     }
 
-    pub async fn get_object(&self, key: &str) -> ApiResult<Vec<u8>> {
+    pub async fn get_object(&self, key: &str) -> Result<Vec<u8>, HandlerError> {
         let response = self.client
             .get_object()
             .bucket(&self.bucket)
             .key(key)
             .send()
             .await
-            .map_err(|e| ApiError::StorageError(format!("Failed to get object: {}", e)))?;
+            .map_err(|e| HandlerError::StorageError(format!("Failed to get object: {}", e)))?;
 
         let data = response.body.collect().await
-            .map_err(|e| ApiError::StorageError(format!("Failed to read object body: {}", e)))?;
+            .map_err(|e| HandlerError::StorageError(format!("Failed to read object body: {}", e)))?;
 
         Ok(data.into_bytes().to_vec())
     }
 
-    pub async fn delete_object(&self, key: &str) -> ApiResult<()> {
+    pub async fn delete_object(&self, key: &str) -> Result<(), HandlerError> {
         self.client
             .delete_object()
             .bucket(&self.bucket)
             .key(key)
             .send()
             .await
-            .map_err(|e| ApiError::StorageError(format!("Failed to delete object: {}", e)))?;
+            .map_err(|e| HandlerError::StorageError(format!("Failed to delete object: {}", e)))?;
 
         Ok(())
     }

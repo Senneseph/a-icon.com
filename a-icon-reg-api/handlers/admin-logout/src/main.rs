@@ -1,7 +1,7 @@
 use rust_edge_gateway_sdk::{prelude::*, handler_loop};
 use a_icon_shared::{
     admin::AdminService,
-    error::{ApiError, ApiResult},
+    HandlerError,
 };
 use serde::Serialize;
 
@@ -10,21 +10,16 @@ struct LogoutResponse {
     success: bool,
 }
 
-#[tokio::main]
-async fn main() {
-    handler_loop!(handle);
-}
-
-async fn handle(req: Request) -> Response {
-    match handle_logout(req).await {
+fn handle(req: Request) -> Response {
+    match handle_logout(&req) {
         Ok(response) => response,
-        Err(e) => Response::error(e.status_code(), e.to_json()),
+        Err(e) => e.to_response(),
     }
 }
 
-async fn handle_logout(req: Request) -> ApiResult<Response> {
-    // Extract token from Authorization header
-    let token = extract_bearer_token(&req)?;
+fn handle_logout(req: &Request) -> Result<Response, HandlerError> {
+    // Extract token from Authorization header using SDK helper
+    let token = extract_bearer_token(req)?;
 
     // Initialize admin service
     let admin = AdminService::new()?;
@@ -35,17 +30,18 @@ async fn handle_logout(req: Request) -> ApiResult<Response> {
     // Build response
     let response = LogoutResponse { success: true };
 
-    Ok(Response::ok(serde_json::to_value(response).unwrap()))
+    Ok(Response::ok(json!(response)))
 }
 
-fn extract_bearer_token(req: &Request) -> ApiResult<String> {
-    let auth_header = req.headers.get("authorization")
-        .ok_or_else(|| ApiError::Unauthorized("Missing Authorization header".to_string()))?;
+fn extract_bearer_token(req: &Request) -> Result<String, HandlerError> {
+    let auth_header = req.require_header("Authorization")?;
 
     if !auth_header.starts_with("Bearer ") {
-        return Err(ApiError::Unauthorized("Invalid Authorization header format".to_string()));
+        return Err(HandlerError::Unauthorized("Invalid Authorization header format".to_string()));
     }
 
     Ok(auth_header[7..].to_string())
 }
+
+handler_loop!(handle);
 

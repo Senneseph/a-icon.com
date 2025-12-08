@@ -6,5 +6,5 @@ pub mod error;
 pub mod admin;
 pub mod utils;
 
-pub use error::{ApiError, ApiResult};
+pub use error::HandlerError;
 

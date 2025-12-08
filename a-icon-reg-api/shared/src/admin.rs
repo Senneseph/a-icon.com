@@ -1,4 +1,4 @@
-use crate::error::{ApiError, ApiResult};
+use crate::error::HandlerError;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::fs;
@@ -13,12 +13,12 @@ pub struct AdminService {
 }
 
 impl AdminService {
-    pub fn new() -> ApiResult<Self> {
+    pub fn new() -> Result<Self, HandlerError> {
         let password_file = env::var("ADMIN_PASSWORD_FILE")
             .unwrap_or_else(|_| ".admin-password".to_string());
 
         let password = fs::read_to_string(&password_file)
-            .map_err(|e| ApiError::InternalError(format!("Failed to read admin password: {}", e)))?
+            .map_err(|e| HandlerError::InternalError(format!("Failed to read admin password: {}", e)))?
             .trim()
             .to_string();
 
@@ -28,9 +28,9 @@ impl AdminService {
         })
     }
 
-    pub fn verify_password(&self, password: &str) -> ApiResult<(String, DateTime<Utc>)> {
+    pub fn verify_password(&self, password: &str) -> Result<(String, DateTime<Utc>), HandlerError> {
         if password != self.password {
-            return Err(ApiError::Unauthorized("Invalid password".to_string()));
+            return Err(HandlerError::Unauthorized("Invalid password".to_string()));
         }
 
         let token = Uuid::new_v4().to_string();

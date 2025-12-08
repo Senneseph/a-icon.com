@@ -1,7 +1,7 @@
 use rust_edge_gateway_sdk::{prelude::*, handler_loop};
 use a_icon_shared::{
     admin::AdminService,
-    error::{ApiError, ApiResult},
+    HandlerError,
 };
 use serde::{Deserialize, Serialize};
 
@@ -17,22 +17,16 @@ struct LoginResponse {
     expires_at: String,
 }
 
-#[tokio::main]
-async fn main() {
-    handler_loop!(handle);
-}
-
-async fn handle(req: Request) -> Response {
-    match handle_login(req).await {
+fn handle(req: Request) -> Response {
+    match handle_login(&req) {
         Ok(response) => response,
-        Err(e) => Response::error(e.status_code(), e.to_json()),
+        Err(e) => e.to_response(),
     }
 }
 
-async fn handle_login(req: Request) -> ApiResult<Response> {
-    // Parse JSON body
-    let login_req: LoginRequest = serde_json::from_slice(&req.body)
-        .map_err(|e| ApiError::BadRequest(format!("Invalid JSON: {}", e)))?;
+fn handle_login(req: &Request) -> Result<Response, HandlerError> {
+    // Parse JSON body using new SDK helper
+    let login_req: LoginRequest = req.json()?;
 
     // Initialize admin service
     let admin = AdminService::new()?;
@@ -46,6 +40,8 @@ async fn handle_login(req: Request) -> ApiResult<Response> {
         expires_at: expires_at.to_rfc3339(),
     };
 
-    Ok(Response::ok(serde_json::to_value(response).unwrap()))
+    Ok(Response::ok(json!(response)))
 }
+
+handler_loop!(handle);
 

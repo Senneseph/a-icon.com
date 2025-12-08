@@ -4,7 +4,7 @@ use a_icon_shared::{
     storage::StorageService,
     validation::{validate_domain, validate_metadata, validate_file_size, validate_image_type},
     models::{Favicon, SourceType, GenerationStatus, FaviconDetailResponse},
-    error::{ApiError, ApiResult},
+    HandlerError,
     utils::generate_short_id,
 };
 use chrono::Utc;
@@ -22,22 +22,16 @@ struct CanvasRequest {
     metadata: Option<String>,
 }
 
-#[tokio::main]
-async fn main() {
-    handler_loop!(handle);
-}
-
-async fn handle(req: Request) -> Response {
-    match handle_canvas(req).await {
+fn handle(req: Request) -> Response {
+    match handle_canvas(&req) {
         Ok(response) => response,
-        Err(e) => Response::error(e.status_code(), e.to_json()),
+        Err(e) => e.to_response(),
     }
 }
 
-async fn handle_canvas(req: Request) -> ApiResult<Response> {
-    // Parse JSON body
-    let canvas_req: CanvasRequest = serde_json::from_slice(&req.body)
-        .map_err(|e| ApiError::BadRequest(format!("Invalid JSON: {}", e)))?;
+fn handle_canvas(req: &Request) -> Result<Response, HandlerError> {
+    // Parse JSON body using SDK helper
+    let canvas_req: CanvasRequest = req.json()?;
 
     // Parse data URL
     let (mime_type, image_data) = parse_data_url(&canvas_req.data_url)?;
@@ -63,16 +57,25 @@ async fn handle_canvas(req: Request) -> ApiResult<Response> {
     let source_size = image_data.len() as i64;
 
     // Initialize services
-    let db_path = env::var("DB_PATH").unwrap_or_else(|_| "/data/a-icon.db".to_string());
+    let db_path = env::var("DB_PATH")
+        .map_err(|e| HandlerError::InternalError(format!("DB_PATH not set: {}", e)))?;
     let db = Database::new(&db_path)?;
-    let storage = StorageService::new().await?;
+
+    // Create tokio runtime for async storage operations
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| HandlerError::InternalError(e.to_string()))?;
+
+    let storage = rt.block_on(async {
+        StorageService::new().await
+            .map_err(|e| HandlerError::StorageError(format!("Failed to initialize storage: {}", e)))
+    })?;
 
     // Check for duplicate
     if let Some(existing) = db.find_duplicate(&source_hash, source_size)? {
         // Return existing favicon details
         let assets = db.get_assets_by_favicon_id(&existing.id)?;
         let response = FaviconDetailResponse::from_favicon_and_assets(existing, assets);
-        return Ok(Response::ok(serde_json::to_value(response).unwrap()));
+        return Ok(Response::ok(json!(response)));
     }
 
     // Generate IDs
@@ -82,7 +85,9 @@ async fn handle_canvas(req: Request) -> ApiResult<Response> {
 
     // Store source image
     let source_key = format!("sources/{}/original", id);
-    storage.upload_object(&source_key, image_data, &mime_type).await?;
+    rt.block_on(async {
+        storage.upload_object(&source_key, image_data, &mime_type).await
+    })?;
 
     // Create favicon record
     let has_metadata = canvas_req.metadata.as_ref().map(|m| !m.trim().is_empty()).unwrap_or(false);
@@ -110,22 +115,22 @@ async fn handle_canvas(req: Request) -> ApiResult<Response> {
     db.insert_favicon(&favicon)?;
 
     // TODO: Generate favicon assets asynchronously
-    
+
     let assets = db.get_assets_by_favicon_id(&id)?;
     let response = FaviconDetailResponse::from_favicon_and_assets(favicon, assets);
 
-    Ok(Response::ok(serde_json::to_value(response).unwrap()))
+    Ok(Response::ok(json!(response)))
 }
 
-fn parse_data_url(data_url: &str) -> ApiResult<(String, Vec<u8>)> {
+fn parse_data_url(data_url: &str) -> Result<(String, Vec<u8>), HandlerError> {
     // Format: data:image/png;base64,iVBORw0KGgo...
     if !data_url.starts_with("data:") {
-        return Err(ApiError::BadRequest("Invalid data URL format".to_string()));
+        return Err(HandlerError::BadRequest("Invalid data URL format".to_string()));
     }
 
     let parts: Vec<&str> = data_url[5..].splitn(2, ',').collect();
     if parts.len() != 2 {
-        return Err(ApiError::BadRequest("Invalid data URL format".to_string()));
+        return Err(HandlerError::BadRequest("Invalid data URL format".to_string()));
     }
 
     let header = parts[0];
@@ -137,13 +142,15 @@ fn parse_data_url(data_url: &str) -> ApiResult<(String, Vec<u8>)> {
 
     // Check if base64 encoded
     if !header.contains("base64") {
-        return Err(ApiError::BadRequest("Only base64-encoded data URLs are supported".to_string()));
+        return Err(HandlerError::BadRequest("Only base64-encoded data URLs are supported".to_string()));
     }
 
     // Decode base64
     let decoded = base64::decode(data)
-        .map_err(|e| ApiError::BadRequest(format!("Invalid base64 data: {}", e)))?;
+        .map_err(|e| HandlerError::BadRequest(format!("Invalid base64 data: {}", e)))?;
 
     Ok((mime_type, decoded))
 }
+
+handler_loop!(handle);
 

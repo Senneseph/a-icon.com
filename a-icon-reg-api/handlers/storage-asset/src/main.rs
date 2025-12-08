@@ -1,31 +1,35 @@
 use rust_edge_gateway_sdk::{prelude::*, handler_loop};
 use a_icon_shared::{
     storage::StorageService,
-    error::{ApiError, ApiResult},
+    HandlerError,
 };
 
-#[tokio::main]
-async fn main() {
-    handler_loop!(handle);
-}
-
-async fn handle(req: Request) -> Response {
-    match handle_asset(req).await {
+fn handle(req: Request) -> Response {
+    match handle_asset(&req) {
         Ok(response) => response,
-        Err(e) => Response::error(e.status_code(), e.to_json()),
+        Err(e) => e.to_response(),
     }
 }
 
-async fn handle_asset(req: Request) -> ApiResult<Response> {
-    // Extract path from wildcard parameter
-    let path = req.path_params.get("path")
-        .ok_or_else(|| ApiError::BadRequest("Missing path parameter".to_string()))?;
+fn handle_asset(req: &Request) -> Result<Response, HandlerError> {
+    // Extract path from wildcard parameter using SDK helper
+    let path = req.path_param("path")
+        .ok_or_else(|| HandlerError::BadRequest("Missing path parameter".to_string()))?;
+
+    // Create tokio runtime for async storage operations
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| HandlerError::InternalError(e.to_string()))?;
 
     // Initialize storage service
-    let storage = StorageService::new().await?;
+    let storage = rt.block_on(async {
+        StorageService::new().await
+            .map_err(|e| HandlerError::StorageError(format!("Failed to initialize storage: {}", e)))
+    })?;
 
     // Get asset file
-    let data = storage.get_object(path).await?;
+    let data = rt.block_on(async {
+        storage.get_object(path).await
+    })?;
 
     // Determine MIME type from file extension
     let mime_type = if let Some(ext) = path.split('.').last() {
@@ -34,11 +38,10 @@ async fn handle_asset(req: Request) -> ApiResult<Response> {
         StorageService::detect_mime_type(&data)
     };
 
-    // Build response with binary data
-    let mut response = Response::ok_binary(data);
-    response.headers.insert("Content-Type".to_string(), mime_type);
-    response.headers.insert("Cache-Control".to_string(), "public, max-age=31536000".to_string());
-
-    Ok(response)
+    // Build response with binary data using SDK helper
+    Ok(Response::binary(200, data, &mime_type)
+        .with_cache(31536000))
 }
+
+handler_loop!(handle);
 

@@ -1,20 +1,20 @@
-use crate::error::{ApiError, ApiResult};
+use crate::error::HandlerError;
 use regex::Regex;
 
 /// Validate domain name format
 /// - Max 256 characters
 /// - Must contain a "." with content before and after it (TLD syntax)
-pub fn validate_domain(domain: &str) -> ApiResult<()> {
+pub fn validate_domain(domain: &str) -> Result<(), HandlerError> {
     // Check length
     if domain.len() > 256 {
-        return Err(ApiError::ValidationError(
+        return Err(HandlerError::ValidationError(
             "Domain name must not exceed 256 characters".to_string(),
         ));
     }
 
     // Check for dot presence
     if !domain.contains('.') {
-        return Err(ApiError::ValidationError(
+        return Err(HandlerError::ValidationError(
             "Domain name must contain at least one dot (.)".to_string(),
         ));
     }
@@ -22,14 +22,14 @@ pub fn validate_domain(domain: &str) -> ApiResult<()> {
     // Check that there's content before and after the dot
     let parts: Vec<&str> = domain.split('.').collect();
     if parts.len() < 2 {
-        return Err(ApiError::ValidationError(
+        return Err(HandlerError::ValidationError(
             "Domain name must have content before and after the dot".to_string(),
         ));
     }
 
     // Check that no part is empty
     if parts.iter().any(|part| part.is_empty()) {
-        return Err(ApiError::ValidationError(
+        return Err(HandlerError::ValidationError(
             "Domain name cannot have empty parts (e.g., \"example..com\")".to_string(),
         ));
     }
@@ -40,7 +40,7 @@ pub fn validate_domain(domain: &str) -> ApiResult<()> {
     ).unwrap();
 
     if !domain_regex.is_match(domain) {
-        return Err(ApiError::ValidationError(
+        return Err(HandlerError::ValidationError(
             "Invalid domain name format. Domain must contain only letters, numbers, hyphens, and dots, and follow TLD syntax".to_string(),
         ));
     }
@@ -49,9 +49,9 @@ pub fn validate_domain(domain: &str) -> ApiResult<()> {
 }
 
 /// Validate metadata length (max 256 characters for JPEG compatibility)
-pub fn validate_metadata(metadata: &str) -> ApiResult<()> {
+pub fn validate_metadata(metadata: &str) -> Result<(), HandlerError> {
     if metadata.len() > 256 {
-        return Err(ApiError::ValidationError(
+        return Err(HandlerError::ValidationError(
             "Metadata must not exceed 256 characters".to_string(),
         ));
     }
@@ -59,11 +59,11 @@ pub fn validate_metadata(metadata: &str) -> ApiResult<()> {
 }
 
 /// Validate file size (max 0.5 MB)
-pub fn validate_file_size(size: usize) -> ApiResult<()> {
+pub fn validate_file_size(size: usize) -> Result<(), HandlerError> {
     const MAX_SIZE: usize = 512 * 1024; // 0.5 MB
     if size > MAX_SIZE {
         let size_mb = size as f64 / (1024.0 * 1024.0);
-        return Err(ApiError::ValidationError(format!(
+        return Err(HandlerError::ValidationError(format!(
             "File size ({:.2}MB) exceeds the maximum allowed size of 0.5 MB",
             size_mb
         )));
@@ -72,9 +72,9 @@ pub fn validate_file_size(size: usize) -> ApiResult<()> {
 }
 
 /// Validate that the buffer is an image
-pub fn validate_image_type(buffer: &[u8]) -> ApiResult<String> {
+pub fn validate_image_type(buffer: &[u8]) -> Result<String, HandlerError> {
     if buffer.len() < 4 {
-        return Err(ApiError::ValidationError(
+        return Err(HandlerError::ValidationError(
             "File is too small to be a valid image".to_string(),
         ));
     }
@@ -103,7 +103,7 @@ pub fn validate_image_type(buffer: &[u8]) -> ApiResult<String> {
         }
     }
 
-    Err(ApiError::ValidationError(
+    Err(HandlerError::ValidationError(
         "Only image files are allowed (PNG, JPEG, GIF, SVG)".to_string(),
     ))
 }

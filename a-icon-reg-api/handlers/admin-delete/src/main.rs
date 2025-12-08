@@ -3,7 +3,7 @@ use a_icon_shared::{
     admin::AdminService,
     database::Database,
     storage::StorageService,
-    error::{ApiError, ApiResult},
+    HandlerError,
 };
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -26,48 +26,51 @@ struct DeleteResponse {
     results: Vec<DeleteResult>,
 }
 
-#[tokio::main]
-async fn main() {
-    handler_loop!(handle);
-}
-
-async fn handle(req: Request) -> Response {
-    match handle_delete(req).await {
+fn handle(req: Request) -> Response {
+    match handle_delete(&req) {
         Ok(response) => response,
-        Err(e) => Response::error(e.status_code(), e.to_json()),
+        Err(e) => e.to_response(),
     }
 }
 
-async fn handle_delete(req: Request) -> ApiResult<Response> {
+fn handle_delete(req: &Request) -> Result<Response, HandlerError> {
     // Extract token from Authorization header
-    let token = extract_bearer_token(&req)?;
+    let token = extract_bearer_token(req)?;
 
     // Initialize admin service and verify token
     let admin = AdminService::new()?;
     if !admin.verify_token(&token) {
-        return Err(ApiError::Unauthorized("Invalid or expired token".to_string()));
+        return Err(HandlerError::Unauthorized("Invalid or expired token".to_string()));
     }
 
-    // Parse JSON body
-    let delete_req: DeleteRequest = serde_json::from_slice(&req.body)
-        .map_err(|e| ApiError::BadRequest(format!("Invalid JSON: {}", e)))?;
+    // Parse JSON body using SDK helper
+    let delete_req: DeleteRequest = req.json()?;
 
     // Initialize services
-    let db_path = env::var("DB_PATH").unwrap_or_else(|_| "/data/a-icon.db".to_string());
+    let db_path = env::var("DB_PATH")
+        .map_err(|e| HandlerError::InternalError(format!("DB_PATH not set: {}", e)))?;
     let db = Database::new(&db_path)?;
-    let storage = StorageService::new().await?;
+
+    // Create tokio runtime for async storage operations
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| HandlerError::InternalError(e.to_string()))?;
+
+    let storage = rt.block_on(async {
+        StorageService::new().await
+            .map_err(|e| HandlerError::StorageError(format!("Failed to initialize storage: {}", e)))
+    })?;
 
     // Delete each favicon
     let mut results = Vec::new();
     for id in delete_req.ids {
-        let result = delete_favicon(&db, &storage, &id).await;
+        let result = rt.block_on(delete_favicon(&db, &storage, &id));
         results.push(result);
     }
 
     // Build response
     let response = DeleteResponse { results };
 
-    Ok(Response::ok(serde_json::to_value(response).unwrap()))
+    Ok(Response::ok(json!(response)))
 }
 
 async fn delete_favicon(db: &Database, storage: &StorageService, id: &str) -> DeleteResult {
@@ -136,14 +139,15 @@ async fn delete_favicon(db: &Database, storage: &StorageService, id: &str) -> De
     }
 }
 
-fn extract_bearer_token(req: &Request) -> ApiResult<String> {
-    let auth_header = req.headers.get("authorization")
-        .ok_or_else(|| ApiError::Unauthorized("Missing Authorization header".to_string()))?;
+fn extract_bearer_token(req: &Request) -> Result<String, HandlerError> {
+    let auth_header = req.require_header("Authorization")?;
 
     if !auth_header.starts_with("Bearer ") {
-        return Err(ApiError::Unauthorized("Invalid Authorization header format".to_string()));
+        return Err(HandlerError::Unauthorized("Invalid Authorization header format".to_string()));
     }
 
     Ok(auth_header[7..].to_string())
 }
+
+handler_loop!(handle);
 

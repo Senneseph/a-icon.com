@@ -1,7 +1,7 @@
-use crate::error::ApiResult;
+use crate::error::HandlerError;
 
 /// Parse multipart form data from request body
-pub fn parse_multipart(body: &[u8], boundary: &str) -> ApiResult<MultipartData> {
+pub fn parse_multipart(body: &[u8], boundary: &str) -> Result<MultipartData, HandlerError> {
     let boundary_bytes = format!("--{}", boundary).into_bytes();
     let mut parts = Vec::new();
     let mut current_pos = 0;
@@ -58,7 +58,7 @@ fn skip_newline(data: &[u8]) -> Option<usize> {
     }
 }
 
-fn parse_part(data: &[u8]) -> ApiResult<Option<MultipartPart>> {
+fn parse_part(data: &[u8]) -> Result<Option<MultipartPart>, HandlerError> {
     // Find the blank line that separates headers from content
     let separator = b"\r\n\r\n";
     let separator_pos = find_subsequence(data, separator)
