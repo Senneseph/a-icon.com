@@ -1,0 +1,15 @@
+[package]
+name = "storage-source"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "storage-source"
+path = "src/main.rs"
+
+[dependencies]
+rust-edge-gateway-sdk = { git = "https://github.com/Senneseph/rust-edge-gateway.git" }
+a-icon-shared = { path = "../../shared" }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+
