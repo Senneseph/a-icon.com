@@ -1,0 +1,581 @@
+openapi: 3.0.3
+info:
+  title: A-Icon API
+  description: API for generating and managing favicons with metadata and steganography support
+  version: 1.0.0
+  contact:
+    name: A-Icon
+    url: https://a-icon.com
+
+servers:
+  - url: https://a-icon.com/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: favicons
+    description: Favicon generation and retrieval
+  - name: directory
+    description: Public directory of published favicons
+  - name: admin
+    description: Admin operations (authentication required)
+  - name: storage
+    description: File storage and retrieval
+  - name: health
+    description: Health check endpoint
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      description: Returns the health status of the API
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: '2025-12-08T12:00:00.000Z'
+
+  /favicons/upload:
+    post:
+      tags: [favicons]
+      summary: Upload an image to generate a favicon
+      description: Upload an image file (max 0.5 MB) and generate a complete favicon set
+      operationId: uploadFavicon
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file (max 0.5 MB)
+                title:
+                  type: string
+                  description: Optional title for the favicon
+                  maxLength: 256
+                targetDomain:
+                  type: string
+                  description: Target domain name (must contain a dot with content before/after)
+                  maxLength: 256
+                  pattern: '^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$'
+                metadata:
+                  type: string
+                  description: Secret metadata to embed steganographically (max 256 chars)
+                  maxLength: 256
+      responses:
+        '200':
+          description: Favicon created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaviconDetail'
+        '400':
+          description: Bad request (invalid file, size, domain, or metadata)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /favicons/canvas:
+    post:
+      tags: [favicons]
+      summary: Create favicon from canvas data
+      description: Submit a canvas-created icon as base64 data URL
+      operationId: createFromCanvas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - dataUrl
+              properties:
+                dataUrl:
+                  type: string
+                  description: Base64-encoded data URL (e.g., data:image/png;base64,...)
+                  example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA...'
+                title:
+                  type: string
+                  description: Optional title for the favicon
+                  maxLength: 256
+                targetDomain:
+                  type: string
+                  description: Target domain name
+                  maxLength: 256
+                metadata:
+                  type: string
+                  description: Secret metadata to embed
+                  maxLength: 256
+      responses:
+        '200':
+          description: Favicon created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaviconDetail'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /favicons/{slug}:
+    get:
+      tags: [favicons]
+      summary: Get favicon details
+      description: Retrieve favicon metadata and list of generated assets
+      operationId: getFavicon
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique slug identifier for the favicon
+      responses:
+        '200':
+          description: Favicon found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaviconDetail'
+        '404':
+          description: Favicon not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /directory:
+    get:
+      tags: [directory]
+      summary: List published favicons
+      description: Get a paginated list of published favicons in the directory
+      operationId: listDirectory
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 500
+          description: Number of items per page
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, slug, domain]
+            default: domain
+          description: Field to sort by
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order
+      responses:
+        '200':
+          description: List of published favicons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryResponse'
+
+  /admin/login:
+    post:
+      tags: [admin]
+      summary: Admin login
+      description: Verify admin password and receive session token
+      operationId: adminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  type: string
+                  description: Admin password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Session token for authenticated requests
+                  expiresAt:
+                    type: string
+                    format: date-time
+        '400':
+          description: Password is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/logout:
+    post:
+      tags: [admin]
+      summary: Admin logout
+      description: Invalidate session token
+      operationId: adminLogout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/verify:
+    post:
+      tags: [admin]
+      summary: Verify admin token
+      description: Check if session token is still valid
+      operationId: adminVerify
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/favicons:
+    delete:
+      tags: [admin]
+      summary: Delete favicons
+      description: Permanently delete multiple favicons and their assets
+      operationId: deleteFavicons
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ids
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of favicon IDs to delete
+                  minItems: 1
+      responses:
+        '200':
+          description: Deletion results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        success:
+                          type: boolean
+                        error:
+                          type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /storage/sources/{faviconId}/original:
+    get:
+      tags: [storage]
+      summary: Get source image
+      description: Retrieve the original source image for a favicon
+      operationId: getSourceImage
+      parameters:
+        - name: faviconId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Favicon ID
+      responses:
+        '200':
+          description: Source image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Source image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /storage/{path}:
+    get:
+      tags: [storage]
+      summary: Get stored file
+      description: Retrieve a stored asset file
+      operationId: getFile
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Storage key path
+      responses:
+        '200':
+          description: File content
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/x-icon:
+              schema:
+                type: string
+                format: binary
+            image/svg+xml:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Admin session token
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Bad request
+        error:
+          type: string
+          example: Bad Request
+
+    FaviconAsset:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Asset ID
+        type:
+          type: string
+          enum: [ICO, PNG, SVG]
+          description: Asset type
+        size:
+          type: string
+          description: Asset size (e.g., '16x16', '192x192', 'MULTI')
+          nullable: true
+        format:
+          type: string
+          description: File format (e.g., '.ico', '.png', '.svg')
+        mimeType:
+          type: string
+          description: MIME type
+        url:
+          type: string
+          description: URL to download the asset
+
+    FaviconDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique favicon ID
+        slug:
+          type: string
+          description: URL-friendly slug
+        title:
+          type: string
+          nullable: true
+          description: Favicon title
+        targetDomain:
+          type: string
+          nullable: true
+          description: Target domain name
+        publishedUrl:
+          type: string
+          description: Published URL
+        sourceUrl:
+          type: string
+          description: URL to the original source image
+        sourceType:
+          type: string
+          enum: [UPLOAD, CANVAS]
+          description: How the favicon was created
+        isPublished:
+          type: boolean
+          description: Whether the favicon is published
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        generatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Generation completion timestamp
+        generationStatus:
+          type: string
+          enum: [PENDING, SUCCESS, FAILED]
+          description: Generation status
+        generationError:
+          type: string
+          nullable: true
+          description: Error message if generation failed
+        metadata:
+          type: string
+          nullable: true
+          description: Secret metadata embedded in images
+        hasSteganography:
+          type: boolean
+          description: Whether steganography was applied
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/FaviconAsset'
+          description: List of generated assets
+
+    DirectoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+          nullable: true
+        targetDomain:
+          type: string
+          nullable: true
+        publishedUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    DirectoryResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirectoryItem'
+        total:
+          type: integer
+          description: Total number of published favicons
+        page:
+          type: integer
+          description: Current page number
+        pageSize:
+          type: integer
+          description: Items per page
+        totalPages:
+          type: integer
+          description: Total number of pages
+
