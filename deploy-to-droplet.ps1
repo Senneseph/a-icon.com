@@ -107,8 +107,8 @@ docker-compose -f docker-compose.prod.yml ps
 
 echo ''
 echo '=== Checking API health ==='
-sleep 5
-curl -f http://localhost:3000/api/health || echo 'API health check failed (may need more time)'
+sleep 15
+curl -f http://localhost:8080/api/health || echo 'API health check pending (may need more time)'
 
 echo ''
 echo '=== Deployment Complete ==='
@@ -119,7 +119,8 @@ Write-Host "=== Deployment Complete ===" -ForegroundColor Green
 Write-Host ""
 Write-Host "Application should be running at:" -ForegroundColor Cyan
 Write-Host "  - http://$DROPLET_IP:4200 (Web)" -ForegroundColor White
-Write-Host "  - http://$DROPLET_IP:3000 (API)" -ForegroundColor White
+Write-Host "  - http://$DROPLET_IP:8080 (Rust Edge Gateway API)" -ForegroundColor White
+Write-Host "  - http://$DROPLET_IP:8081 (Gateway Admin UI)" -ForegroundColor White
 Write-Host ""
 Write-Host "To view logs, run:" -ForegroundColor Yellow
 Write-Host "  ssh -i $SSH_KEY ubuntu@$DROPLET_IP 'cd /opt/a-icon && docker-compose -f docker-compose.prod.yml logs -f'" -ForegroundColor White

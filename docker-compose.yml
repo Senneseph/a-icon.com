@@ -1,6 +1,34 @@
 services:
-  # API service removed - migrated to Rust Edge Gateway
-  # See a-icon-reg-api/ for new Rust handlers
+  # Rust Edge Gateway - handles all API requests
+  rust-edge-gateway:
+    image: ghcr.io/senneseph/rust-edge-gateway:latest
+    container_name: rust-edge-gateway
+    restart: unless-stopped
+    ports:
+      - '8080:8080'   # API Gateway
+      - '8081:8081'   # Admin UI
+    volumes:
+      - ./data:/app/data
+      - ./a-icon-reg-api/dist/handlers:/app/handlers:ro
+      - ./a-icon-reg-api/openapi.yaml:/app/openapi.yaml:ro
+    environment:
+      - RUST_LOG=info,rust_edge_gateway=debug
+      - RUST_EDGE_GATEWAY_DATA_DIR=/app/data
+      - RUST_EDGE_GATEWAY_HANDLERS_DIR=/app/handlers
+      # Handler environment variables
+      - DB_PATH=/app/data/a-icon.db
+      - S3_ENDPOINT=${S3_ENDPOINT:-https://nyc3.digitaloceanspaces.com}
+      - S3_REGION=${S3_REGION:-nyc3}
+      - S3_BUCKET=${S3_BUCKET:-a-icon}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - ADMIN_PASSWORD_FILE=/app/data/.admin-password
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   web:
     build:
@@ -16,6 +44,9 @@ services:
       API_URL_SSR: http://rust-edge-gateway:8080
     ports:
       - '4200:4000'
+    depends_on:
+      rust-edge-gateway:
+        condition: service_healthy
 
 volumes:
   api-data:

@@ -1,9 +1,9 @@
-# Build Docker images locally and deploy to DigitalOcean droplet
-# This script builds images locally, saves them as tar files, transfers to droplet, and loads them
+# Deploy Rust Edge Gateway to DigitalOcean droplet
+# The gateway compiles handlers dynamically via its Admin API
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== Building and Deploying Docker Images to DigitalOcean ===" -ForegroundColor Green
+Write-Host "=== Deploying Rust Edge Gateway to DigitalOcean ===" -ForegroundColor Green
 Write-Host ""
 
 # Load environment variables from .env file
@@ -40,67 +40,10 @@ if (-not (Test-Path $SSH_KEY)) {
     exit 1
 }
 
-# Step 1: Build Docker images locally
-Write-Host "=== Step 1: Building Docker images locally ===" -ForegroundColor Green
+# Step 1: Transfer files to droplet
 Write-Host ""
-
-Write-Host "Building API image..." -ForegroundColor Cyan
-docker build -t a-icon-api:latest ./a-icon-api
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Failed to build API image" -ForegroundColor Red
-    exit 1
-}
-
+Write-Host "=== Step 1: Transferring files to droplet ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "Building Web image..." -ForegroundColor Cyan
-docker build -t a-icon-web:latest --build-arg API_URL= ./a-icon-web
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Failed to build Web image" -ForegroundColor Red
-    exit 1
-}
-
-# Step 2: Save Docker images to tar files
-Write-Host ""
-Write-Host "=== Step 2: Saving Docker images to tar files ===" -ForegroundColor Green
-Write-Host ""
-
-Write-Host "Saving API image..." -ForegroundColor Cyan
-docker save a-icon-api:latest -o a-icon-api.tar
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Failed to save API image" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Saving Web image..." -ForegroundColor Cyan
-docker save a-icon-web:latest -o a-icon-web.tar
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Failed to save Web image" -ForegroundColor Red
-    exit 1
-}
-
-$apiSize = (Get-Item a-icon-api.tar).Length / 1MB
-$webSize = (Get-Item a-icon-web.tar).Length / 1MB
-Write-Host "API image size: $([math]::Round($apiSize, 2)) MB" -ForegroundColor Gray
-Write-Host "Web image size: $([math]::Round($webSize, 2)) MB" -ForegroundColor Gray
-
-# Step 3: Transfer tar files to droplet
-Write-Host ""
-Write-Host "=== Step 3: Transferring images to droplet ===" -ForegroundColor Green
-Write-Host ""
-
-Write-Host "Transferring API image..." -ForegroundColor Cyan
-scp -i $SSH_KEY -o StrictHostKeyChecking=no a-icon-api.tar ubuntu@${DROPLET_IP}:/tmp/a-icon-api.tar
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Failed to transfer API image" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Transferring Web image..." -ForegroundColor Cyan
-scp -i $SSH_KEY -o StrictHostKeyChecking=no a-icon-web.tar ubuntu@${DROPLET_IP}:/tmp/a-icon-web.tar
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Failed to transfer Web image" -ForegroundColor Red
-    exit 1
-}
 
 Write-Host "Transferring docker-compose.prod.yml..." -ForegroundColor Cyan
 scp -i $SSH_KEY -o StrictHostKeyChecking=no docker-compose.prod.yml ubuntu@${DROPLET_IP}:/tmp/docker-compose.prod.yml
@@ -109,17 +52,20 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Step 4: Load images and start containers on droplet
+Write-Host "Transferring setup scripts..." -ForegroundColor Cyan
+scp -i $SSH_KEY -o StrictHostKeyChecking=no scripts/setup-gateway.sh ubuntu@${DROPLET_IP}:/tmp/setup-gateway.sh
+scp -i $SSH_KEY -o StrictHostKeyChecking=no scripts/setup-sqlite-service.sh ubuntu@${DROPLET_IP}:/tmp/setup-sqlite-service.sh
+
+# Step 2: Deploy gateway on droplet
 Write-Host ""
-Write-Host "=== Step 4: Loading images and starting containers ===" -ForegroundColor Green
+Write-Host "=== Step 2: Deploying Rust Edge Gateway ===" -ForegroundColor Green
 Write-Host ""
 
 ssh -i $SSH_KEY ubuntu@$DROPLET_IP @"
 set -e
 
-echo '=== Loading Docker images ==='
-docker load -i /tmp/a-icon-api.tar
-docker load -i /tmp/a-icon-web.tar
+echo '=== Pulling Rust Edge Gateway image ==='
+docker pull ghcr.io/senneseph/rust-edge-gateway:latest
 
 echo ''
 echo '=== Setting up application directory ==='
@@ -128,51 +74,53 @@ sudo chown -R ubuntu:ubuntu /opt/a-icon
 cd /opt/a-icon
 
 echo ''
-echo '=== Copying docker-compose file ==='
+echo '=== Copying files ==='
 cp /tmp/docker-compose.prod.yml docker-compose.prod.yml
-
-echo ''
-echo '=== Creating data directory ==='
-mkdir -p data
+cp /tmp/setup-gateway.sh setup-gateway.sh
+cp /tmp/setup-sqlite-service.sh setup-sqlite-service.sh
+chmod +x setup-gateway.sh setup-sqlite-service.sh
 
 echo ''
 echo '=== Stopping old containers ==='
 docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
 
 echo ''
-echo '=== Starting new containers ==='
-docker-compose -f docker-compose.prod.yml up -d
+echo '=== Starting gateway ==='
+docker-compose -f docker-compose.prod.yml up -d rust-edge-gateway
 
 echo ''
-echo '=== Waiting for services to start ==='
-sleep 10
+echo '=== Waiting for gateway to start ==='
+sleep 15
 
 echo ''
 echo '=== Container status ==='
 docker-compose -f docker-compose.prod.yml ps
 
 echo ''
-echo '=== Cleaning up tar files ==='
-rm -f /tmp/a-icon-api.tar /tmp/a-icon-web.tar /tmp/docker-compose.prod.yml
+echo '=== Checking Admin API health ==='
+curl -s http://localhost:8081/api/health || echo 'Admin API not ready yet...'
 
 echo ''
-echo '=== Deployment Complete ==='
+echo '=== Cleaning up temp files ==='
+rm -f /tmp/docker-compose.prod.yml /tmp/setup-gateway.sh /tmp/setup-sqlite-service.sh
+
+echo ''
+echo '=== Gateway Deployment Complete ==='
 "@
 
-# Clean up local tar files
 Write-Host ""
-Write-Host "Cleaning up local tar files..." -ForegroundColor Cyan
-Remove-Item a-icon-api.tar -ErrorAction SilentlyContinue
-Remove-Item a-icon-web.tar -ErrorAction SilentlyContinue
-
+Write-Host "=== Gateway Deployed ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "=== Deployment Complete ===" -ForegroundColor Green
+Write-Host "Gateway is running at:" -ForegroundColor Cyan
+Write-Host "  - http://$DROPLET_IP:8080 (Gateway API)" -ForegroundColor White
+Write-Host "  - http://$DROPLET_IP:8081 (Admin API/UI)" -ForegroundColor White
 Write-Host ""
-Write-Host "Application is running at:" -ForegroundColor Cyan
-Write-Host "  - http://$DROPLET_IP:4200 (Web)" -ForegroundColor White
-Write-Host "  - http://$DROPLET_IP:3000 (API)" -ForegroundColor White
+Write-Host "Next steps:" -ForegroundColor Yellow
+Write-Host "  1. SSH into droplet: ssh -i $SSH_KEY ubuntu@$DROPLET_IP" -ForegroundColor White
+Write-Host "  2. Run setup script: cd /opt/a-icon && ./setup-gateway.sh" -ForegroundColor White
+Write-Host "  3. Run SQLite setup: ./setup-sqlite-service.sh" -ForegroundColor White
 Write-Host ""
 Write-Host "To view logs:" -ForegroundColor Yellow
-Write-Host "  ssh -i $SSH_KEY ubuntu@$DROPLET_IP 'cd /opt/a-icon && docker-compose -f docker-compose.prod.yml logs -f'" -ForegroundColor White
+Write-Host "  ssh -i $SSH_KEY ubuntu@$DROPLET_IP 'cd /opt/a-icon && docker-compose -f docker-compose.prod.yml logs -f rust-edge-gateway'" -ForegroundColor White
 Write-Host ""
 

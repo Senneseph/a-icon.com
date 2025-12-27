@@ -1,28 +1,29 @@
 services:
-  api:
-    build:
-      context: ./a-icon-api
-      dockerfile: Dockerfile
-    container_name: a-icon-api
+  # Rust Edge Gateway - handles all API requests
+  rust-edge-gateway:
+    image: ghcr.io/senneseph/rust-edge-gateway:latest
+    container_name: rust-edge-gateway
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      DB_PATH: /usr/src/app/data/a-icon.db
-      STORAGE_ROOT: /usr/src/app/data/storage
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      - "8080:8080"   # API Gateway
+      - "8081:8081"   # Admin UI
     volumes:
-      - ./data:/usr/src/app/data
+      - gateway-data:/app/data
+      - gateway-handlers:/app/handlers
+    environment:
+      - RUST_LOG=info,rust_edge_gateway=debug
+      - RUST_EDGE_GATEWAY_DATA_DIR=/app/data
+      - RUST_EDGE_GATEWAY_HANDLERS_DIR=/app/handlers
+      - RUST_EDGE_GATEWAY_GATEWAY_PORT=8080
+      - RUST_EDGE_GATEWAY_ADMIN_PORT=8081
     networks:
       - a-icon-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 30s
 
   web:
     build:
@@ -37,11 +38,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      API_URL_SSR: http://api:3000
+      API_URL_SSR: http://rust-edge-gateway:8080
     networks:
       - a-icon-network
     depends_on:
-      - api
+      rust-edge-gateway:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000"]
       interval: 30s
@@ -54,5 +56,6 @@ networks:
     driver: bridge
 
 volumes:
-  api-data:
+  gateway-data:
+  gateway-handlers:
 
