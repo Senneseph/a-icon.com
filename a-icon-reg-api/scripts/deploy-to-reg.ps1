@@ -5,6 +5,17 @@ $COMPILE = if ($env:COMPILE) { $env:COMPILE } else { "true" }
 $START = if ($env:START) { $env:START } else { "true" }
 $BUNDLE_NAME = "a-icon-api-bundle.zip"
 
+# Load API key from .env file
+$envContent = Get-Content -Path "..\.env" -Raw
+$apiKeyMatch = [regex]::Match($envContent, 'RUST_EDGE_GATEWAY_API_KEY=(.+)')
+if ($apiKeyMatch.Success) {
+    $API_KEY = $apiKeyMatch.Groups[1].Value.Trim()
+    Write-Host "Using API Key: $($API_KEY.Substring(0, 8))..." -ForegroundColor Green
+} else {
+    Write-Host "ERROR: RUST_EDGE_GATEWAY_API_KEY not found in .env file" -ForegroundColor Red
+    exit 1
+}
+
 Write-Host "=== A-Icon API Deployment to Rust Edge Gateway ===" -ForegroundColor Cyan
 Write-Host "REG URL: $REG_URL"
 Write-Host "Domain: $DOMAIN"
@@ -82,10 +93,53 @@ $UPLOAD_URL = "$REG_URL/api/import/bundle?domain=$DOMAIN&compile=$COMPILE&start=
 Write-Host "Upload URL: $UPLOAD_URL"
 Write-Host ""
 
-# Use curl.exe for multipart upload (PowerShell Invoke-WebRequest doesn't support -Form in older versions)
+# Login to Admin UI to obtain session token
+Write-Host "Logging in to Admin UI..." -ForegroundColor Cyan
+$LOGIN_URL = "$REG_URL/auth/login"
+
+# Load admin credentials from .env file
+$envContent = Get-Content -Path "..\.env" -Raw
+$adminUsernameMatch = [regex]::Match($envContent, 'RUST_EDGE_GATEWAY_ADMIN_USERNAME=(.+)')
+$adminPasswordMatch = [regex]::Match($envContent, 'RUST_EDGE_GATEWAY_ADMIN_PASSWORD=(.+)')
+
+if ($adminUsernameMatch.Success -and $adminPasswordMatch.Success) {
+    $ADMIN_USERNAME = $adminUsernameMatch.Groups[1].Value.Trim()
+    $ADMIN_PASSWORD = $adminPasswordMatch.Groups[1].Value.Trim()
+    Write-Host "Using Admin Username: $ADMIN_USERNAME" -ForegroundColor Green
+} else {
+    Write-Host "ERROR: RUST_EDGE_GATEWAY_ADMIN_USERNAME or RUST_EDGE_GATEWAY_ADMIN_PASSWORD not found in .env file" -ForegroundColor Red
+    exit 1
+}
+
+$loginArgs = @(
+    "-X", "POST",
+    $LOGIN_URL,
+    "-H", "Content-Type: application/json",
+    "-d", '{"username": "' + $ADMIN_USERNAME + '", "password": "' + $ADMIN_PASSWORD + '", "recaptcha_token": "test-token"}',
+    "-v"
+)
+
+Write-Host "Running: curl.exe $($loginArgs -join ' ')"
+Write-Host ""
+
+$loginResponse = & curl.exe $loginArgs
+
+# Extract session cookie from login response
+$sessionCookieMatch = [regex]::Match($loginResponse, 'Set-Cookie: ([^;]+)')
+if ($sessionCookieMatch.Success) {
+    $SESSION_COOKIE = $sessionCookieMatch.Groups[1].Value.Trim()
+    Write-Host "Session Cookie: $($SESSION_COOKIE.Substring(0, 20))..." -ForegroundColor Green
+} else {
+    Write-Host "ERROR: Failed to obtain session cookie" -ForegroundColor Red
+    Write-Host "Login Response: $loginResponse" -ForegroundColor Red
+    exit 1
+}
+
+# Use curl.exe for multipart upload with session cookie
 $curlArgs = @(
     "-X", "POST",
     $UPLOAD_URL,
+    "-H", "Cookie: $SESSION_COOKIE",
     "-F", "bundle=@$bundlePath",
     "-v"
 )
@@ -94,6 +148,22 @@ Write-Host "Running: curl.exe $($curlArgs -join ' ')"
 Write-Host ""
 
 & curl.exe $curlArgs
+
+# Logout from Admin UI
+Write-Host "Logging out from Admin UI..." -ForegroundColor Cyan
+$LOGOUT_URL = "$REG_URL/auth/logout"
+
+$logoutArgs = @(
+    "-X", "POST",
+    $LOGOUT_URL,
+    "-H", "Cookie: $SESSION_COOKIE",
+    "-v"
+)
+
+Write-Host "Running: curl.exe $($logoutArgs -join ' ')"
+Write-Host ""
+
+& curl.exe $logoutArgs
 
 Write-Host ""
 Write-Host "=== Deployment Complete ===" -ForegroundColor Cyan

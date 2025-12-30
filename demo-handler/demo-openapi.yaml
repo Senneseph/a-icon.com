@@ -1,0 +1,36 @@
+openapi: 3.0.3
+info:
+  title: Demo API
+  description: Simple demo API for testing Rust Edge Gateway deployment
+  version: 1.0.0
+
+servers:
+  - url: https://a-icon.com/api
+    description: Production server
+
+paths:
+  /demo-api:
+    get:
+      summary: Demo endpoint
+      description: Simple demo endpoint to test gateway functionality
+      operationId: demoApi
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  timestamp:
+                    type: string
+                  path:
+                    type: string
+                  method:
+                    type: string
+                  headers:
+                    type: object
+                  query:
+                    type: object
